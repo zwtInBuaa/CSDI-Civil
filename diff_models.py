@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+import copy
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -122,30 +123,30 @@ class ResidualBlock(nn.Module):
     #     y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
     #     return y
 
-    def forward_combined(self, y, base_shape):
+    def forward_combined(self, combined, base_shape):
         B, channel, K, L = base_shape
 
-        # Reshape for time dimension
-        if L > 1:
-            y_time = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-            y_time = self.time_layer(y_time.permute(2, 0, 1)).permute(1, 2, 0)
-            y_time = y_time.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
-        else:
-            y_time = y
-
-        # Reshape for feature dimension
-        if K > 1:
-            y_feature = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-            y_feature = self.feature_layer(y_feature.permute(2, 0, 1)).permute(1, 2, 0)
-            y_feature = y_feature.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
-        else:
-            y_feature = y
-        print("y_time.shape=", y_time.shape)
-        print("y_feature.shape=", y_feature.shape)
-
-        # Combine time and feature dimensions using another Transformer layer
-        # combined = torch.cat([y_time, y_feature], dim=1)
-        combined = (y_time + y_feature) / 2
+        # # Reshape for time dimension
+        # if L > 1:
+        #     y_time = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
+        #     y_time = self.time_layer(y_time.permute(2, 0, 1)).permute(1, 2, 0)
+        #     y_time = y_time.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+        # else:
+        #     y_time = y
+        #
+        # # Reshape for feature dimension
+        # if K > 1:
+        #     y_feature = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
+        #     y_feature = self.feature_layer(y_feature.permute(2, 0, 1)).permute(1, 2, 0)
+        #     y_feature = y_feature.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
+        # else:
+        #     y_feature = y
+        # print("y_time.shape=", y_time.shape)
+        # print("y_feature.shape=", y_feature.shape)
+        #
+        # # Combine time and feature dimensions using another Transformer layer
+        # # combined = torch.cat([y_time, y_feature], dim=1)
+        # combined = (y_time + y_feature) / 2
         # combined = self.linear_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         # print(combined, combined.shape)
         combined = self.transformer_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
@@ -183,7 +184,10 @@ class ResidualBlock(nn.Module):
         # # print("y1:")
         # # print(y, y.shape)
         # y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        y = self.forward_combined(y, base_shape)
+        tmp_y = y.copy()
+        y1 = self.forward_time(y, base_shape)
+        y2 = self.forward_feature(y, base_shape)
+        y = self.forward_combined((y1 + y2) / 2, base_shape)
         # print("y2:")
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
