@@ -97,6 +97,18 @@ class diff_CSDI(nn.Module):
         return x
 
 
+class MyCombinedLayer(nn.Module):
+    def __init__(self, channels, heads):
+        super(MyCombinedLayer, self).__init__()
+        self.combined_layer = nn.TransformerEncoderLayer(
+            d_model=2 * channels, nhead=heads, dim_feedforward=64, activation="gelu"
+        )
+
+    def forward(self, x):
+        x = self.combined_layer(x)
+        return x
+
+
 class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
@@ -110,15 +122,40 @@ class ResidualBlock(nn.Module):
 
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-    def forward_transformer(self, y, base_shape):
-        # print(base_shape)
+    # def forward_transformer(self, y, base_shape):
+    #     # print(base_shape)
+    #     B, channel, K, L = base_shape
+    #     if L == 1 or K == 1:
+    #         return y
+    #     y = y.reshape(B, channel, K, L).permute(2, 3, 0, 1).reshape(K * L, B, channel)
+    #     y = self.transformer_layer(y).permute(1, 2, 0)
+    #     y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+    #     return y
+
+    def forward_combined(self, y, base_shape):
         B, channel, K, L = base_shape
-        if L == 1 or K == 1:
-            return y
-        y = y.reshape(B, channel, K, L).permute(2, 3, 0, 1).reshape(K * L, B, channel)
-        y = self.transformer_layer(y).permute(1, 2, 0)
-        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
-        return y
+
+        # Reshape for time dimension
+        if L > 1:
+            y_time = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
+            y_time = self.time_layer(y_time.permute(2, 0, 1)).permute(1, 2, 0)
+            y_time = y_time.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+        else:
+            y_time = y
+
+        # Reshape for feature dimension
+        if K > 1:
+            y_feature = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
+            y_feature = self.feature_layer(y_feature.permute(2, 0, 1)).permute(1, 2, 0)
+            y_feature = y_feature.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
+        else:
+            y_feature = y
+
+        # Combine time and feature dimensions using another Transformer layer
+        combined = torch.cat([y_time, y_feature], dim=1)
+        combined = self.combined_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
+
+        return combined
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -146,12 +183,13 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
-        print("y1:")
-        print(y, y.shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        print("y2:")
-        print(y, y.shape)
+        # y = self.forward_time(y, base_shape)
+        # # print("y1:")
+        # # print(y, y.shape)
+        # y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = self.forward_combined(y, base_shape)
+        # print("y2:")
+        # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 
