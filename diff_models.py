@@ -108,7 +108,7 @@ class ResidualBlock(nn.Module):
         # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-        self.transformer_layer = get_torch_trans(heads=nheads, layers=2, channels=channels)
+        self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
     def forward_transformer(self, y, base_shape):
         B, channel, K, L = base_shape
