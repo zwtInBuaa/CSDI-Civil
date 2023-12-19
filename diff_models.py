@@ -144,8 +144,9 @@ class ResidualBlock(nn.Module):
         print("y_feature.shape=", y_feature.shape)
 
         # Combine time and feature dimensions using another Transformer layer
-        combined = torch.cat([y_time, y_feature], dim=1)
-        combined = self.linear_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
+        # combined = torch.cat([y_time, y_feature], dim=1)
+        combined = (y_time + y_feature) / 2
+        # combined = self.linear_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         # print(combined, combined.shape)
         combined = self.transformer_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         combined = combined.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
