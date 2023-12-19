@@ -6,7 +6,7 @@ import torch
 
 
 class PM25_Dataset(Dataset):
-    def __init__(self, eval_length=16, target_dim=72, mode="train", validindex=0):
+    def __init__(self, eval_length=32, target_dim=72, mode="train", validindex=0):
         self.eval_length = eval_length
         self.target_dim = target_dim
 
