@@ -101,6 +101,8 @@ class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
+        self.linear_layer = nn.Linear(128, 64)
+
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
@@ -145,7 +147,8 @@ class ResidualBlock(nn.Module):
 
         # Combine time and feature dimensions using another Transformer layer
         combined = torch.cat([y_time, y_feature], dim=1)
-        print(combined,combined.shape)
+        combined = self.linear_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
+        # print(combined, combined.shape)
         combined = self.combined_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         combined = combined.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
 
