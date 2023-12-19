@@ -111,7 +111,7 @@ class ResidualBlock(nn.Module):
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
         self.combined_layer = nn.TransformerEncoderLayer(
-            d_model=2 * channels, nhead=nheads, dim_feedforward=64, activation="gelu"
+            d_model=channels, nhead=nheads, dim_feedforward=64, activation="gelu"
         )
 
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
