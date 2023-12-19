@@ -111,7 +111,7 @@ class ResidualBlock(nn.Module):
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
     def forward_transformer(self, y, base_shape):
-        print(base_shape)
+        # print(base_shape)
         B, channel, K, L = base_shape
         if L == 1 or K == 1:
             return y
