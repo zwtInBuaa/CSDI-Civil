@@ -110,10 +110,6 @@ class ResidualBlock(nn.Module):
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-        self.combined_layer = nn.TransformerEncoderLayer(
-            d_model=channels, nhead=nheads, dim_feedforward=64, activation="gelu"
-        )
-
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
     # def forward_transformer(self, y, base_shape):
@@ -149,7 +145,7 @@ class ResidualBlock(nn.Module):
         combined = torch.cat([y_time, y_feature], dim=1)
         combined = self.linear_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         # print(combined, combined.shape)
-        combined = self.combined_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
+        combined = self.transformer_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         combined = combined.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
 
         return combined
