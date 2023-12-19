@@ -97,17 +97,6 @@ class diff_CSDI(nn.Module):
         return x
 
 
-class MyCombinedLayer(nn.Module):
-    def __init__(self, channels, heads):
-        super(MyCombinedLayer, self).__init__()
-        self.combined_layer = nn.TransformerEncoderLayer(
-            d_model=2 * channels, nhead=heads, dim_feedforward=64, activation="gelu"
-        )
-
-    def forward(self, x):
-        x = self.combined_layer(x)
-        return x
-
 
 class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
@@ -119,6 +108,10 @@ class ResidualBlock(nn.Module):
 
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+
+        self.combined_layer = nn.TransformerEncoderLayer(
+            d_model=2 * channels, nhead=nheads, dim_feedforward=64, activation="gelu"
+        )
 
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
