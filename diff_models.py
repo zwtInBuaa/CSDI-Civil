@@ -102,7 +102,7 @@ class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
-        self.linear_layer = nn.Linear(128, 64)
+        # self.linear_layer = nn.Linear(128, 64)
 
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
@@ -181,13 +181,14 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
+        # y = self.forward_time(y, base_shape)
         # # # print("y1:")
         # # # print(y, y.shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         # y1 = self.forward_time(y, base_shape)
         # y2 = self.forward_feature(y, base_shape)
-        # y = self.forward_combined((y1 + y2) / 2, base_shape)
+        # y = self.forward_combined((y1+y2)/2,base_shape)
+        y = self.forward_combined(y, base_shape)
         # print("y2:")
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
