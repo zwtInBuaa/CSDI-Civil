@@ -191,7 +191,7 @@ class ResidualBlock(nn.Module):
         # print("y2:")
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
-        y = self.forward_feature(y, base_shape)
+        # y = self.forward_feature(y, base_shape)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 
         _, cond_dim, _, _ = cond_info.shape
