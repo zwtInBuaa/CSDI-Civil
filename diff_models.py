@@ -114,7 +114,8 @@ class ResidualBlock(nn.Module):
         B, channel, K, L = base_shape
         if L == 1 or K == 1:
             return y
-        y = self.transformer_layer(y.permute(2, 3, 0, 1)).permute(1, 2, 3, 0)
+        y = y.reshape(B, channel, K, L).reshape(B, channel, K * L)
+        y = self.transformer_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
