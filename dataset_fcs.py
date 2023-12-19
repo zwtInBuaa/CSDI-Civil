@@ -16,12 +16,12 @@ class PM25_Dataset(Dataset):
         if mode == "train":
             month_list = [1, 2, 4, 5, 7, 8, 10, 11]
             # 1st,4th,7th,10th months are excluded from histmask (since the months are used for creating missing patterns in test dataset)
-            flag_for_histmask = [0, 1, 0, 1, 0, 1, 0, 1] 
+            flag_for_histmask = [0, 1, 0, 1, 0, 1, 0, 1]
             month_list.pop(validindex)
             flag_for_histmask.pop(validindex)
         elif mode == "valid":
             month_list = [1, 2, 4, 5, 7, 8, 10, 11]
-            month_list = month_list[validindex : validindex + 1]
+            month_list = month_list[validindex: validindex + 1]
         elif mode == "test":
             month_list = [3, 6, 9, 12]
         self.month_list = month_list
@@ -60,11 +60,11 @@ class PM25_Dataset(Dataset):
                 ).tolist()
 
             # mask values for observed indices are 1
-            c_mask = 1 - current_df.isnull().values #无缺失样本掩码矩阵
-            c_gt_mask = 1 - current_df_gt.isnull().values #由缺失样本的掩码矩阵
+            c_mask = 1 - current_df.isnull().values  # 无缺失样本掩码矩阵
+            c_gt_mask = 1 - current_df_gt.isnull().values  # 由缺失样本的掩码矩阵
             c_data = (
-                (current_df.fillna(0).values - self.train_mean) / self.train_std
-            ) * c_mask #归一化到0均值和单位方差
+                             (current_df.fillna(0).values - self.train_mean) / self.train_std
+                     ) * c_mask  # 归一化到0均值和单位方差
 
             self.observed_mask.append(c_mask)
             self.gt_mask.append(c_gt_mask)
@@ -116,17 +116,17 @@ class PM25_Dataset(Dataset):
         hist_index = self.position_in_month_histmask[index]
         s = {
             "observed_data": self.observed_data[c_month][
-                c_index : c_index + self.eval_length
-            ],
+                             c_index: c_index + self.eval_length
+                             ],
             "observed_mask": self.observed_mask[c_month][
-                c_index : c_index + self.eval_length
-            ],
+                             c_index: c_index + self.eval_length
+                             ],
             "gt_mask": self.gt_mask[c_month][
-                c_index : c_index + self.eval_length
-            ],
+                       c_index: c_index + self.eval_length
+                       ],
             "hist_mask": self.observed_mask[hist_month][
-                hist_index : hist_index + self.eval_length
-            ],
+                         hist_index: hist_index + self.eval_length
+                         ],
             "timepoints": np.arange(self.eval_length),
             "cut_length": self.cut_length[org_index],
         }

@@ -105,26 +105,36 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-    def forward_time(self, y, base_shape):
+        self.transformer_layer = get_torch_trans(heads=nheads, layers=2, channels=channels)
+
+    def forward_transformer(self, y, base_shape):
         B, channel, K, L = base_shape
-        if L == 1:
+        if L == 1 or K == 1:
             return y
-        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.transformer_layer(y.permute(2, 3, 0, 1)).permute(1, 2, 3, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
-    def forward_feature(self, y, base_shape):
-        B, channel, K, L = base_shape
-        if K == 1:
-            return y
-        y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
-        return y
+    # def forward_time(self, y, base_shape):
+    #     B, channel, K, L = base_shape
+    #     if L == 1:
+    #         return y
+    #     y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
+    #     y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+    #     y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+    #     return y
+    #
+    # def forward_feature(self, y, base_shape):
+    #     B, channel, K, L = base_shape
+    #     if K == 1:
+    #         return y
+    #     y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
+    #     y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+    #     y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
+    #     return y
 
     def forward(self, x, cond_info, diffusion_emb):
         B, channel, K, L = x.shape
@@ -134,8 +144,9 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # y = self.forward_time(y, base_shape)
+        # y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = self.forward_transformer(y, base_shape)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 
         _, cond_dim, _, _ = cond_info.shape

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from diff_models import diff_CSDI
+from diff_models_init import diff_CSDI
 
 
 class CSDI_base(nn.Module):
@@ -41,6 +41,7 @@ class CSDI_base(nn.Module):
 
         self.alpha_hat = 1 - self.beta
         self.alpha = np.cumprod(self.alpha_hat)
+
         self.alpha_torch = torch.tensor(self.alpha).float().to(self.device).unsqueeze(1).unsqueeze(1)
 
     def time_embedding(self, pos, d_model=128):
@@ -76,7 +77,7 @@ class CSDI_base(nn.Module):
             if self.target_strategy == "mix" and mask_choice > 0.5:
                 cond_mask[i] = rand_mask[i]
             else:  # draw another sample for histmask (i-1 corresponds to another sample)
-                cond_mask[i] = cond_mask[i] * for_pattern_mask[i - 1] 
+                cond_mask[i] = cond_mask[i] * for_pattern_mask[i - 1]
         return cond_mask
 
     def get_side_info(self, observed_tp, cond_mask):
@@ -99,7 +100,7 @@ class CSDI_base(nn.Module):
         return side_info
 
     def calc_loss_valid(
-        self, observed_data, cond_mask, observed_mask, side_info, is_train
+            self, observed_data, cond_mask, observed_mask, side_info, is_train
     ):
         loss_sum = 0
         for t in range(self.num_steps):  # calculate loss for all t
@@ -110,7 +111,7 @@ class CSDI_base(nn.Module):
         return loss_sum / self.num_steps
 
     def calc_loss(
-        self, observed_data, cond_mask, observed_mask, side_info, is_train, set_t=-1
+            self, observed_data, cond_mask, observed_mask, side_info, is_train, set_t=-1
     ):
         B, K, L = observed_data.shape
         if is_train != 1:  # for validation
@@ -175,8 +176,8 @@ class CSDI_base(nn.Module):
                 if t > 0:
                     noise = torch.randn_like(current_sample)
                     sigma = (
-                        (1.0 - self.alpha[t - 1]) / (1.0 - self.alpha[t]) * self.beta[t]
-                    ) ** 0.5
+                                    (1.0 - self.alpha[t - 1]) / (1.0 - self.alpha[t]) * self.beta[t]
+                            ) ** 0.5
                     current_sample += sigma * noise
 
             imputed_samples[:, i] = current_sample.detach()
@@ -225,7 +226,7 @@ class CSDI_base(nn.Module):
             samples = self.impute(observed_data, cond_mask, side_info, n_samples)
 
             for i in range(len(cut_length)):  # to avoid double evaluation
-                target_mask[i, ..., 0 : cut_length[i].item()] = 0
+                target_mask[i, ..., 0: cut_length[i].item()] = 0
         return samples, observed_data, target_mask, observed_mask, observed_tp
 
 

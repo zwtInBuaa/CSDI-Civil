@@ -6,12 +6,12 @@ import pickle
 
 
 def train(
-    model,
-    config,
-    train_loader,
-    valid_loader=None,
-    valid_epoch_interval=5,
-    foldername="",
+        model,
+        config,
+        train_loader,
+        valid_loader=None,
+        valid_epoch_interval=5,
+        foldername="",
 ):
     optimizer = Adam(model.parameters(), lr=config["lr"], weight_decay=1e-6)
     if foldername != "":
@@ -91,7 +91,7 @@ def calc_quantile_CRPS(target, forecast, eval_points, mean_scaler, scaler):
     for i in range(len(quantiles)):
         q_pred = []
         for j in range(len(forecast)):
-            q_pred.append(torch.quantile(forecast[j : j + 1], quantiles[i], dim=1))
+            q_pred.append(torch.quantile(forecast[j: j + 1], quantiles[i], dim=1))
         q_pred = torch.cat(q_pred, 0)
         q_loss = quantile_loss(target, q_pred, quantiles[i], eval_points)
         CRPS += q_loss / denom
@@ -99,7 +99,6 @@ def calc_quantile_CRPS(target, forecast, eval_points, mean_scaler, scaler):
 
 
 def evaluate(model, test_loader, nsample=100, scaler=1, mean_scaler=0, foldername=""):
-
     with torch.no_grad():
         model.eval()
         mse_total = 0
@@ -129,11 +128,11 @@ def evaluate(model, test_loader, nsample=100, scaler=1, mean_scaler=0, foldernam
                 all_generated_samples.append(samples)
 
                 mse_current = (
-                    ((samples_median.values - c_target) * eval_points) ** 2
-                ) * (scaler ** 2)
+                                      ((samples_median.values - c_target) * eval_points) ** 2
+                              ) * (scaler ** 2)
                 mae_current = (
-                    torch.abs((samples_median.values - c_target) * eval_points) 
-                ) * scaler
+                                  torch.abs((samples_median.values - c_target) * eval_points)
+                              ) * scaler
 
                 mse_total += mse_current.sum().item()
                 mae_total += mae_current.sum().item()
@@ -149,7 +148,7 @@ def evaluate(model, test_loader, nsample=100, scaler=1, mean_scaler=0, foldernam
                 )
 
             with open(
-                foldername + "/generated_outputs_nsample" + str(nsample) + ".pk", "wb"
+                    foldername + "/generated_outputs_nsample" + str(nsample) + ".pk", "wb"
             ) as f:
                 all_target = torch.cat(all_target, dim=0)
                 all_evalpoint = torch.cat(all_evalpoint, dim=0)
@@ -175,7 +174,7 @@ def evaluate(model, test_loader, nsample=100, scaler=1, mean_scaler=0, foldernam
             )
 
             with open(
-                foldername + "/result_nsample" + str(nsample) + ".pk", "wb"
+                    foldername + "/result_nsample" + str(nsample) + ".pk", "wb"
             ) as f:
                 pickle.dump(
                     [
