@@ -225,7 +225,7 @@ class ResidualBlock(nn.Module):
         # y = self.forward_combined((y1+y2)/2,base_shape)
         # y = self.forward_combined(y, base_shape)
         # print("y2:")
-        print("ResidualBlock.forward y.shape", y.shape)
+        # print("ResidualBlock.forward y.shape", y.shape)
         y = self.forword_imputation(y, base_shape)
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)

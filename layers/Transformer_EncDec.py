@@ -59,7 +59,7 @@ class Encoder(nn.Module):
         self.norm = norm_layer
 
     def forward(self, x, attn_mask=None, tau=None, delta=None):
-        print("Encoder.forward x.shape", x.shape)
+        # print("Encoder.forward x.shape", x.shape)
         # x [B, L, D]
         attns = []
         if self.conv_layers is not None:
