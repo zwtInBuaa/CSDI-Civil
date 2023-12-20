@@ -121,9 +121,9 @@ class ResidualBlock(nn.Module):
                 EncoderLayer(
                     AttentionLayer(
                         FullAttention(False, 3, attention_dropout=0.1,
-                                      output_attention=True), 128, nheads),
-                    128,
-                    128,
+                                      output_attention=True), channels, nheads),
+                    channels,
+                    nheads,
                     dropout=0.1,
                     activation='gelu'
                 ) for l in range(2)
@@ -144,7 +144,7 @@ class ResidualBlock(nn.Module):
 
     def forword_imputation(self, x, base_shape):
         B, channel, K, L = base_shape
-        x = x.reshape(B, channel, K, L).permute(0, 2, 3, 1).reshape(B * K * L, channel, 1)
+        # x = x.reshape(B, channel, K, L).permute(0, 2, 3, 1).reshape(B * K * L, channel, 1)
         enc_out, attns = self.transformer_layer(x, attn_mask=None)
         x = x.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         # dec_out = self.projection(enc_out)
