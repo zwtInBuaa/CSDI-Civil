@@ -6,6 +6,7 @@ from math import sqrt
 from reformer_pytorch import LSHSelfAttention
 from einops import rearrange, repeat
 
+
 class TriangularCausalMask():
     def __init__(self, B, L, device="cpu"):
         mask_shape = [B, 1, L, L]
@@ -216,6 +217,8 @@ class AttentionLayer(nn.Module):
         self.n_heads = n_heads
 
     def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
+        print("AttentionLayer.forward keys,values", keys, values)
+        print("AttentionLayer.forward queries.shape", queries.shape)
         B, L, _ = queries.shape
         _, S, _ = keys.shape
         H = self.n_heads
