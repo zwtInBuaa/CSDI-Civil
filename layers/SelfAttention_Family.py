@@ -217,7 +217,7 @@ class AttentionLayer(nn.Module):
         self.n_heads = n_heads
 
     def forward(self, queries, keys, values, attn_mask, tau=None, delta=None):
-        print("AttentionLayer.forward keys,values", keys, values)
+        print("AttentionLayer.forward keys,values", keys.shape, values.shape)
         print("AttentionLayer.forward queries.shape", queries.shape)
         B, L, _ = queries.shape
         _, S, _ = keys.shape
