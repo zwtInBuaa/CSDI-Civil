@@ -145,11 +145,16 @@ class ResidualBlock(nn.Module):
     def forword_imputation(self, x, base_shape):
         B, channel, K, L = base_shape
         # enc_out = self.enc_embedding(x_enc, x_mark_enc)
-        x = x.reshape(B, channel, K, L)
-        x, attns = self.transformer_layer(x.permute(2, 3, 0, 1), attn_mask=None)
-        x = x.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+        x = x.reshape(B, channel, K, L).permute(1, 0, 2, 3)
+        y = torch.zeros(channel, B, K, L)
+        for i in range(channel):
+            y[i], attns = self.transformer_layer(x[i], attns_mask=None)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+
+        # x, attns = self.transformer_layer(x.permute(2, 3, 0, 1), attn_mask=None)
+        # x = x.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         # dec_out = self.projection(enc_out)
-        return x
+        return y
 
     def forward_combined(self, combined, base_shape):
         B, channel, K, L = base_shape
