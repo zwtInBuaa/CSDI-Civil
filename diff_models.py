@@ -124,7 +124,7 @@ class ResidualBlock(nn.Module):
                         32,
                         nheads
                     ),
-                    channels,
+                    32,
                     nheads,
                     dropout=0.1,
                     activation='gelu'
