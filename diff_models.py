@@ -143,7 +143,7 @@ class ResidualBlock(nn.Module):
     #     return y
 
     def forword_imputation(self, x, base_shape):
-        enc_out, attns = self.encoder(x, attn_mask=None)
+        enc_out, attns = self.transformer_layer(x, attn_mask=None)
         dec_out = self.projection(enc_out)
         return dec_out
 
