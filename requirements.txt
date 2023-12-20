@@ -5,3 +5,5 @@ tqdm
 pyyaml
 matplotlib
 wget
+reformer-pytorch==1.4.4
+einops==0.4.0
