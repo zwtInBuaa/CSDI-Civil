@@ -120,8 +120,10 @@ class ResidualBlock(nn.Module):
             [
                 EncoderLayer(
                     AttentionLayer(
-                        FullAttention(False, 3, attention_dropout=0.1,
-                                      output_attention=True), channels, nheads),
+                        FullAttention(False, 3, attention_dropout=0.1, output_attention=True),
+                        channels,
+                        nheads
+                    ),
                     channels,
                     nheads,
                     dropout=0.1,
@@ -149,7 +151,7 @@ class ResidualBlock(nn.Module):
         y = torch.zeros(channel, B, K, L)
         for i in range(channel):
             y[i], attns = self.transformer_layer(x[i], attn_mask=None)
-        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+        y = y.permute(1, 0, 2, 3).reshape(B, channel, K * L)
 
         # x, attns = self.transformer_layer(x.permute(2, 3, 0, 1), attn_mask=None)
         # x = x.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
