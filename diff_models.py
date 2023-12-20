@@ -148,7 +148,7 @@ class ResidualBlock(nn.Module):
         B, channel, K, L = base_shape
         # enc_out = self.enc_embedding(x_enc, x_mark_enc)
         x = x.reshape(B, channel, K, L).permute(1, 0, 2, 3)
-        y = torch.zeros(channel, B, K, L)
+        y = torch.zeros(channel, B, K, L).cuda()
         for i in range(channel):
             y[i], attns = self.transformer_layer(x[i], attn_mask=None)
         y = y.permute(1, 0, 2, 3).reshape(B, channel, K * L)
