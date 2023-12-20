@@ -121,7 +121,7 @@ class ResidualBlock(nn.Module):
                 EncoderLayer(
                     AttentionLayer(
                         FullAttention(False, 3, attention_dropout=0.1, output_attention=True),
-                        channels,
+                        32,
                         nheads
                     ),
                     channels,
