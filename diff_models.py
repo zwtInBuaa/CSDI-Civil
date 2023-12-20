@@ -54,6 +54,7 @@ class diff_CSDI(nn.Module):
     def __init__(self, config, inputdim=2):
         super().__init__()
         self.channels = config["channels"]
+        # add length of MTS
 
         self.diffusion_embedding = DiffusionEmbedding(
             num_steps=config["num_steps"],
@@ -68,6 +69,7 @@ class diff_CSDI(nn.Module):
         self.residual_layers = nn.ModuleList(
             [
                 ResidualBlock(
+                    config,
                     side_dim=config["side_dim"],
                     channels=self.channels,
                     diffusion_embedding_dim=config["diffusion_embedding_dim"],
@@ -102,7 +104,8 @@ class diff_CSDI(nn.Module):
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
+    def __init__(self, config, side_dim, channels, diffusion_embedding_dim, nheads):
+        self.length = config["eval_length"]
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         # self.linear_layer = nn.Linear(128, 64)
@@ -121,16 +124,17 @@ class ResidualBlock(nn.Module):
                 EncoderLayer(
                     AttentionLayer(
                         FullAttention(False, 3, attention_dropout=0.1, output_attention=True),
-                        32,
+                        self.length,
                         nheads
                     ),
-                    32,
+                    self.length,
                     nheads,
                     dropout=0.1,
                     activation='gelu'
-                ) for l in range(2)
+                )
+                # for l in range(2)
             ],
-            norm_layer=torch.nn.LayerNorm(32)
+            norm_layer=torch.nn.LayerNorm(self.length)
         )
         # print("self.transformer_layer", self.transformer_layer)
 
@@ -216,17 +220,17 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
+        # y = self.forward_time(y, base_shape)
         # # # print("y1:")
         # # # print(y, y.shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         # y1 = self.forward_time(y, base_shape)
         # y2 = self.forward_feature(y, base_shape)
         # y = self.forward_combined((y1+y2)/2,base_shape)
         # y = self.forward_combined(y, base_shape)
         # print("y2:")
         # print("ResidualBlock.forward y.shape", y.shape)
-        # y = self.forword_imputation(y, base_shape)
+        y = self.forword_imputation(y, base_shape)
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
         # y = self.forward_feature(y, base_shape)
