@@ -188,10 +188,10 @@ class ResidualBlock(nn.Module):
         # y1 = self.forward_time(y, base_shape)
         # y2 = self.forward_feature(y, base_shape)
         # y = self.forward_combined((y1+y2)/2,base_shape)
-        # y = self.forward_combined(y, base_shape)
+        y = self.forward_combined(y, base_shape)
         # print("y2:")
         # print(y, y.shape)
-        y = self.forward_transformer(y, base_shape)
+        # y = self.forward_transformer(y, base_shape)
         # y = self.forward_feature(y, base_shape)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 
