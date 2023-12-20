@@ -128,7 +128,7 @@ class ResidualBlock(nn.Module):
                     activation='gelu'
                 ) for l in range(2)
             ],
-            norm_layer=torch.nn.LayerNorm(128)
+            norm_layer=torch.nn.LayerNorm(channels)
         )
         print("self.transformer_layer", self.transformer_layer)
 
