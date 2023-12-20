@@ -130,6 +130,7 @@ class ResidualBlock(nn.Module):
             ],
             norm_layer=torch.nn.LayerNorm(128)
         )
+        print("self.transformer_layer", self.transformer_layer)
 
     # def forward_transformer(self, y, base_shape):
     #     # print(base_shape)
@@ -213,7 +214,7 @@ class ResidualBlock(nn.Module):
         # y = self.forward_combined((y1+y2)/2,base_shape)
         # y = self.forward_combined(y, base_shape)
         # print("y2:")
-        y = self.forword_imputation(y.x, base_shape)
+        y = self.forword_imputation(y, base_shape)
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
         # y = self.forward_feature(y, base_shape)
