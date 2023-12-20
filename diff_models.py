@@ -111,7 +111,7 @@ class ResidualBlock(nn.Module):
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-        self.transformer_layer = get_torch_trans(heads=nheads, layers=2, channels=channels)
+        self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
     # def forward_transformer(self, y, base_shape):
     #     # print(base_shape)
@@ -191,7 +191,7 @@ class ResidualBlock(nn.Module):
         # y = self.forward_combined(y, base_shape)
         # print("y2:")
         # print(y, y.shape)
-        # y = self.forward_transformer(y, base_shape)
+        y = self.forward_transformer(y, base_shape)
         # y = self.forward_feature(y, base_shape)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 
