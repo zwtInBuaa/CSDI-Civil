@@ -4,6 +4,9 @@ import torch.nn.functional as F
 import math
 import copy
 
+from layers.Transformer_EncDec import Decoder, DecoderLayer, Encoder, EncoderLayer, ConvLayer
+from layers.SelfAttention_Family import FullAttention, AttentionLayer
+
 
 def get_torch_trans(heads=8, layers=1, channels=64):
     encoder_layer = nn.TransformerEncoderLayer(
@@ -113,6 +116,21 @@ class ResidualBlock(nn.Module):
 
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
+        self.transformer_layer = Encoder(
+            [
+                EncoderLayer(
+                    AttentionLayer(
+                        FullAttention(False, 3, attention_dropout=0.1,
+                                      output_attention=True), 128, nheads),
+                    128,
+                    128,
+                    dropout=0.1,
+                    activation='gelu'
+                ) for l in range(2)
+            ],
+            norm_layer=torch.nn.LayerNorm(128)
+        )
+
     # def forward_transformer(self, y, base_shape):
     #     # print(base_shape)
     #     B, channel, K, L = base_shape
@@ -122,6 +140,11 @@ class ResidualBlock(nn.Module):
     #     y = self.transformer_layer(y).permute(1, 2, 0)
     #     y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
     #     return y
+
+    def forword_imputation(self, x, base_shape):
+        enc_out, attns = self.encoder(x, attn_mask=None)
+        dec_out = self.projection(enc_out)
+        return dec_out
 
     def forward_combined(self, combined, base_shape):
         B, channel, K, L = base_shape
@@ -181,15 +204,16 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
+        # y = self.forward_time(y, base_shape)
         # # # print("y1:")
         # # # print(y, y.shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         # y1 = self.forward_time(y, base_shape)
         # y2 = self.forward_feature(y, base_shape)
         # y = self.forward_combined((y1+y2)/2,base_shape)
-        y = self.forward_combined(y, base_shape)
+        # y = self.forward_combined(y, base_shape)
         # print("y2:")
+        y = self.forword_imputation(y.x, base_shape)
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
         # y = self.forward_feature(y, base_shape)
