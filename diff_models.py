@@ -160,10 +160,9 @@ class ResidualBlock(nn.Module):
         # x, attns = self.transformer_layer(x.permute(2, 3, 0, 1), attn_mask=None)
         # x = x.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         # dec_out = self.projection(enc_out)
-
         y = y.reshape(B, channel, K, L).reshape(B, channel, K * L)
-        y, attens = self.transformer_layer(y.permute(0, 2, 1))
-        y = y.permute(2, 1, 0)
+        y, attens = self.transformer_layer(y.permute(2, 0, 1))
+        y = y.permute(1, 2, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
@@ -227,7 +226,7 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.transformer_layer(y, base_shape)
+        # y = self.transformer_layer(y, base_shape)
 
         y = self.forward_time(y, base_shape)
         # # # print("y1:")
