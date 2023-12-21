@@ -140,12 +140,13 @@ class ResidualBlock(nn.Module):
             [
                 EncoderLayer(
                     AutoCorrelationLayer(
-                        AutoCorrelation(False, factor=3, attention_dropout=0.1,
-                                        output_attention=False),
-                        d_model=channels, n_heads=nheads),
+                        AutoCorrelation(False, factor=3, attention_dropout=0.1, output_attention=True),
+                        d_model=channels,
+                        n_heads=nheads
+                    ),
                     d_model=channels,
                     d_ff=128,
-                    moving_avg=25,
+                    moving_avg=8,
                     dropout=0.1,
                     activation='gelu'
                 ) for _ in range(2)
