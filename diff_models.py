@@ -118,7 +118,6 @@ class ResidualBlock(nn.Module):
 
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-
     # def forward_transformer(self, y, base_shape):
     #     # print(base_shape)
     #     B, channel, K, L = base_shape
@@ -193,7 +192,7 @@ class ResidualBlock(nn.Module):
         # combined = (y_time + y_feature) / 2
         # combined = self.linear_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         # print(combined, combined.shape)
-        combined = combined.reshape(B, channel, K, L).permute(0, 2, 3, 1).reshape(B * K * L, channel, 1)
+        combined = combined.reshape(B, channel, K, L).reshape(B, channel, K * L)
         combined = self.transformer_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         combined = combined.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
 
@@ -209,16 +208,16 @@ class ResidualBlock(nn.Module):
 
         # y = self.transformer_layer(y, base_shape)
 
-        y = self.forward_time(y, base_shape)
+        # y = self.forward_time(y, base_shape)
 
         # # # print("y1:")
         # # # print(y, y.shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
 
         # y1 = self.forward_time(y, base_shape)
         # y2 = self.forward_feature(y, base_shape)
         # y = self.forward_combined((y1+y2)/2,base_shape)
-        # y = self.forward_combined(y, base_shape)
+        y = self.forward_combined(y, base_shape)
         # print("y2:")
         # print("ResidualBlock.forward y.shape", y.shape)
         # y = self.forword_imputation(y, base_shape)

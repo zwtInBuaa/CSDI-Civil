@@ -130,7 +130,7 @@ class PM25_Dataset(Dataset):
             "timepoints": np.arange(self.eval_length),
             "cut_length": self.cut_length[org_index],
         }
-        print(s)
+        # print(s)
 
         return s
 
