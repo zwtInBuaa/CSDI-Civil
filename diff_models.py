@@ -229,6 +229,7 @@ class ResidualBlock(nn.Module):
 
         y = self.transformer_layer(y, base_shape)
 
+
         y = self.forward_time(y, base_shape)
         # # # print("y1:")
         # # # print(y, y.shape)
