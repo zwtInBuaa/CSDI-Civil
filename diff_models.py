@@ -148,18 +148,39 @@ class ResidualBlock(nn.Module):
     #     y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
     #     return y
 
-    def forword_imputation(self, x, base_shape):
+    def forword_imputation(self, y, base_shape):
         B, channel, K, L = base_shape
         # enc_out = self.enc_embedding(x_enc, x_mark_enc)
-        x = x.reshape(B, channel, K, L).permute(1, 0, 2, 3)
-        y = torch.zeros(channel, B, K, L).cuda()
-        for i in range(channel):
-            y[i], attns = self.transformer_layer(x[i], attn_mask=None)
-        y = y.permute(1, 0, 2, 3).reshape(B, channel, K * L)
+        # x = x.reshape(B, channel, K, L).permute(1, 0, 2, 3)
+        # y = torch.zeros(channel, B, K, L).cuda()
+        # for i in range(channel):
+        #     y[i], attns = self.transformer_layer(x[i], attn_mask=None)
+        # y = y.permute(1, 0, 2, 3).reshape(B, channel, K * L)
 
         # x, attns = self.transformer_layer(x.permute(2, 3, 0, 1), attn_mask=None)
         # x = x.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         # dec_out = self.projection(enc_out)
+        y = y.reshape(B, channel, K, L).reshape(B, channel, K * L)
+        y = self.transformer_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+        return y
+
+    def forward_time(self, y, base_shape):
+        B, channel, K, L = base_shape
+        if L == 1:
+            return y
+        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
+        y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+        return y
+
+    def forward_feature(self, y, base_shape):
+        B, channel, K, L = base_shape
+        if K == 1:
+            return y
+        y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
+        y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
     def forward_combined(self, combined, base_shape):
@@ -193,24 +214,6 @@ class ResidualBlock(nn.Module):
         combined = combined.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
 
         return combined
-
-    def forward_time(self, y, base_shape):
-        B, channel, K, L = base_shape
-        if L == 1:
-            return y
-        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
-        return y
-
-    def forward_feature(self, y, base_shape):
-        B, channel, K, L = base_shape
-        if K == 1:
-            return y
-        y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
-        return y
 
     def forward(self, x, cond_info, diffusion_emb):
         B, channel, K, L = x.shape
