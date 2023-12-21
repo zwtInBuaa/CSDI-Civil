@@ -119,7 +119,7 @@ class ResidualBlock(nn.Module):
 
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-        self.transformer_layer_time = Encoder(
+        self.transformer_layer = Encoder(
             [
                 EncoderLayer(
                     AttentionLayer(
@@ -137,23 +137,6 @@ class ResidualBlock(nn.Module):
             norm_layer=torch.nn.LayerNorm(channels)
         )
         # print("self.transformer_layer", self.transformer_layer)
-        self.transformer_layer_feature = Encoder(
-            [
-                EncoderLayer(
-                    AttentionLayer(
-                        FullAttention(False, 3, attention_dropout=0.1, output_attention=True),
-                        channels,
-                        nheads
-                    ),
-                    channels,
-                    nheads,
-                    dropout=0.1,
-                    activation='gelu'
-                )
-                # for l in range(2)
-            ],
-            norm_layer=torch.nn.LayerNorm(channels)
-        )
 
     # def forward_transformer(self, y, base_shape):
     #     # print(base_shape)
@@ -178,10 +161,10 @@ class ResidualBlock(nn.Module):
         # x = x.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         # dec_out = self.projection(enc_out)
 
-        # y = y.reshape(B, channel, K, L).reshape(B, channel, K * L)
-        # y, attens = self.transformer_layer(y.permute(2, 0, 1))
-        # y = y.permute(1, 2, 0)
-        # y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+        y = y.reshape(B, channel, K, L).reshape(B, channel, K * L)
+        y, attens = self.transformer_layer(y.permute(2, 0, 1))
+        y = y.permute(1, 2, 0)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
     def forward_time(self, y, base_shape):
@@ -189,7 +172,7 @@ class ResidualBlock(nn.Module):
         if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y, attens = self.transformer_layer_time(y.permute(2, 0, 1))
+        y = self.time_layer(y.permute(2, 0, 1))
         y = y.permute(1, 2, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
@@ -199,7 +182,7 @@ class ResidualBlock(nn.Module):
         if K == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        y,attens = self.transformer_layer_feature(y.permute(2, 0, 1))
+        y = self.feature_layer(y.permute(2, 0, 1))
         y = y.permute(1, 2, 0)
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
@@ -243,6 +226,8 @@ class ResidualBlock(nn.Module):
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
+
+        y = self.transformer_layer(y, base_shape)
 
         y = self.forward_time(y, base_shape)
         # # # print("y1:")
