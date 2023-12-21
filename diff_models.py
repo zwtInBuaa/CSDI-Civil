@@ -162,7 +162,7 @@ class ResidualBlock(nn.Module):
         # dec_out = self.projection(enc_out)
         y = y.reshape(B, channel, K, L).reshape(B, channel, K * L)
         y = self.transformer_layer(y.permute(2, 0, 1))
-        print(y.shape)
+        print(y)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
