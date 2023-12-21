@@ -118,42 +118,6 @@ class ResidualBlock(nn.Module):
 
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-        # self.transformer_layer = Encoder(
-        #     [
-        #         EncoderLayer(
-        #             AttentionLayer(
-        #                 FullAttention(False, 3, attention_dropout=0.1, output_attention=True),
-        #                 channels,
-        #                 nheads
-        #             ),
-        #             channels,
-        #             nheads,
-        #             dropout=0.1,
-        #             activation='gelu'
-        #         )
-        #         # for l in range(2)
-        #     ],
-        #     norm_layer=torch.nn.LayerNorm(channels)
-        # )
-
-        self.encoder = Encoder(
-            [
-                EncoderLayer(
-                    AutoCorrelationLayer(
-                        AutoCorrelation(False, factor=3, attention_dropout=0.1, output_attention=True),
-                        d_model=channels,
-                        n_heads=nheads
-                    ),
-                    d_model=channels,
-                    d_ff=128,
-                    moving_avg=8,
-                    dropout=0.1,
-                    activation='gelu'
-                ) for _ in range(2)
-            ],
-            norm_layer=my_Layernorm(channels)
-        )
-        # print("self.transformer_layer", self.transformer_layer)
 
     # def forward_transformer(self, y, base_shape):
     #     # print(base_shape)
@@ -178,7 +142,7 @@ class ResidualBlock(nn.Module):
         # x = x.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         # dec_out = self.projection(enc_out)
         y = y.reshape(B, channel, K, L).reshape(B, channel, K * L)
-        y, attens = self.encoder(y.permute(2, 0, 1))
+        y, attens = self.transformer_layer(y.permute(2, 0, 1))
         y = y.permute(1, 2, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
@@ -245,11 +209,11 @@ class ResidualBlock(nn.Module):
 
         # y = self.transformer_layer(y, base_shape)
 
-        # y = self.forward_time(y, base_shape)
+        y = self.forward_time(y, base_shape)
 
         # # # print("y1:")
         # # # print(y, y.shape)
-        # y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
 
         # y1 = self.forward_time(y, base_shape)
         # y2 = self.forward_feature(y, base_shape)
@@ -257,7 +221,7 @@ class ResidualBlock(nn.Module):
         # y = self.forward_combined(y, base_shape)
         # print("y2:")
         # print("ResidualBlock.forward y.shape", y.shape)
-        y = self.forword_imputation(y, base_shape)
+        # y = self.forword_imputation(y, base_shape)
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
         # y = self.forward_feature(y, base_shape)

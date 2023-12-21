@@ -5,7 +5,7 @@ import json
 import yaml
 import os
 
-from main_model1 import CSDI_PM25
+from main_model import CSDI_PM25
 
 path = './save/great_98 300/model.pth'
 path1 = './save/great_98 300/config.json'

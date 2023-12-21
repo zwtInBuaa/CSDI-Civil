@@ -150,6 +150,8 @@ def get_dataloader(batch_size, device, validindex=0):
     valid_loader = DataLoader(
         dataset_valid, batch_size=batch_size, num_workers=1, shuffle=False
     )
+    print("dataset", dataset)
+    print("dataset_test", dataset_test)
 
     scaler = torch.Tensor(dataset.train_std).to(device).float()
     mean_scaler = torch.Tensor(dataset.train_mean).to(device).float()
