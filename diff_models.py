@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import copy
-from layers.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
-from layers.Autoformer_EncDec import Encoder, Decoder, EncoderLayer, DecoderLayer, my_Layernorm, series_decomp
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -193,7 +191,7 @@ class ResidualBlock(nn.Module):
         # combined = self.linear_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         # print(combined, combined.shape)
         combined = combined.reshape(B, channel, K, L).reshape(B, channel, K * L)
-        combined = self.transformer_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
+        combined = self.time_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
         combined = combined.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
 
         return combined
