@@ -124,17 +124,17 @@ class ResidualBlock(nn.Module):
                 EncoderLayer(
                     AttentionLayer(
                         FullAttention(False, 3, attention_dropout=0.1, output_attention=True),
-                        self.length,
+                        channels,
                         nheads
                     ),
-                    self.length,
+                    channels,
                     nheads,
                     dropout=0.1,
                     activation='gelu'
                 )
                 # for l in range(2)
             ],
-            norm_layer=torch.nn.LayerNorm(self.length)
+            norm_layer=torch.nn.LayerNorm(channels)
         )
         # print("self.transformer_layer", self.transformer_layer)
 
@@ -170,7 +170,6 @@ class ResidualBlock(nn.Module):
         if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        print(y.permute(2, 0, 1).shape)
         y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
