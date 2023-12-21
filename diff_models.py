@@ -3,9 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import copy
-
-from layers.Transformer_EncDec import Decoder, DecoderLayer, Encoder, EncoderLayer, ConvLayer
-from layers.SelfAttention_Family import FullAttention, AttentionLayer
+from layers.AutoCorrelation import AutoCorrelation, AutoCorrelationLayer
+from layers.Autoformer_EncDec import Encoder, Decoder, EncoderLayer, DecoderLayer, my_Layernorm, series_decomp
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -119,22 +118,39 @@ class ResidualBlock(nn.Module):
 
         self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-        self.transformer_layer = Encoder(
+        # self.transformer_layer = Encoder(
+        #     [
+        #         EncoderLayer(
+        #             AttentionLayer(
+        #                 FullAttention(False, 3, attention_dropout=0.1, output_attention=True),
+        #                 channels,
+        #                 nheads
+        #             ),
+        #             channels,
+        #             nheads,
+        #             dropout=0.1,
+        #             activation='gelu'
+        #         )
+        #         # for l in range(2)
+        #     ],
+        #     norm_layer=torch.nn.LayerNorm(channels)
+        # )
+
+        self.encoder = Encoder(
             [
                 EncoderLayer(
-                    AttentionLayer(
-                        FullAttention(False, 3, attention_dropout=0.1, output_attention=True),
-                        channels,
-                        nheads
-                    ),
-                    channels,
-                    nheads,
+                    AutoCorrelationLayer(
+                        AutoCorrelation(False, factor=3, attention_dropout=0.1,
+                                        output_attention=False),
+                        d_model=channels, n_heads=nheads),
+                    d_model=channels,
+                    d_ff=128,
+                    moving_avg=25,
                     dropout=0.1,
                     activation='gelu'
-                )
-                # for l in range(2)
+                ) for _ in range(2)
             ],
-            norm_layer=torch.nn.LayerNorm(channels)
+            norm_layer=my_Layernorm(channels)
         )
         # print("self.transformer_layer", self.transformer_layer)
 
@@ -161,7 +177,7 @@ class ResidualBlock(nn.Module):
         # x = x.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         # dec_out = self.projection(enc_out)
         y = y.reshape(B, channel, K, L).reshape(B, channel, K * L)
-        y, attens = self.transformer_layer(y.permute(2, 0, 1))
+        y, attens = self.encoder(y.permute(2, 0, 1))
         y = y.permute(1, 2, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
@@ -228,11 +244,11 @@ class ResidualBlock(nn.Module):
 
         # y = self.transformer_layer(y, base_shape)
 
-        y = self.forward_time(y, base_shape)
+        # y = self.forward_time(y, base_shape)
 
         # # # print("y1:")
         # # # print(y, y.shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
 
         # y1 = self.forward_time(y, base_shape)
         # y2 = self.forward_feature(y, base_shape)
