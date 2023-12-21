@@ -229,7 +229,7 @@ class ResidualBlock(nn.Module):
         # y = self.transformer_layer(y, base_shape)
 
         y = self.forward_time(y, base_shape)
-        
+
         # # # print("y1:")
         # # # print(y, y.shape)
         y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
@@ -240,7 +240,7 @@ class ResidualBlock(nn.Module):
         # y = self.forward_combined(y, base_shape)
         # print("y2:")
         # print("ResidualBlock.forward y.shape", y.shape)
-        # y = self.forword_imputation(y, base_shape)
+        y = self.forword_imputation(y, base_shape)
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
         # y = self.forward_feature(y, base_shape)
