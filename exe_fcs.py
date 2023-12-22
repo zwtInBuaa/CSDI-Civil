@@ -22,7 +22,7 @@ def seed_torch(seed=1000):  # 1029,1030
     torch.backends.cudnn.deterministic = True
 
 
-seed_torch()
+seed_torch(1000)
 
 parser = argparse.ArgumentParser(description="CSDI")
 parser.add_argument("--config", type=str, default="base.yaml")
