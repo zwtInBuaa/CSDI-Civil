@@ -204,8 +204,6 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        # y = self.transformer_layer(y, base_shape)
-
         y = self.forward_time(y, base_shape)
 
         # # # print("y1:")
