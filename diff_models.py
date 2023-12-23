@@ -108,13 +108,14 @@ class ResidualBlock(nn.Module):
         # self.linear_layer = nn.Linear(128, 64)
 
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
+        self.cond_projection_1 = Conv1d_with_init(side_dim, channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-        self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
     # def forward_transformer(self, y, base_shape):
     #     # print(base_shape)
@@ -223,12 +224,15 @@ class ResidualBlock(nn.Module):
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
         # y = self.forward_feature(y, base_shape)
-        y = self.mid_projection(y)  # (B,2*channel,K*L)
+        # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
-        cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
+        cond_info = self.cond_projection_1(cond_info)
+        # cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         y = y + cond_info
+        
+        y = self.mid_projection(y)
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
