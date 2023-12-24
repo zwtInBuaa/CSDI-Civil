@@ -231,7 +231,7 @@ class ResidualBlock(nn.Module):
         cond_info = self.cond_projection_1(cond_info)
         # cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         y = y + cond_info
-        
+
         y = self.mid_projection(y)
 
         gate, filter = torch.chunk(y, 2, dim=1)
