@@ -176,7 +176,7 @@ class ResidualBlock(nn.Module):
         y = x + diffusion_emb
 
         y = self.forward_time(y, base_shape)
-        y = self.forwad_feature(y, base_shape)
+        y = self.forward_feature(y, base_shape)
 
         # # # print("y1:")
         # # # print(y, y.shape)
