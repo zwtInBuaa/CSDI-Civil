@@ -115,6 +115,8 @@ class ResidualBlock(nn.Module):
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
+        self.w_tf = nn.Linear(2 * channels, channels)
+
         # self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
     # def forward_transformer(self, y, base_shape):
@@ -127,7 +129,7 @@ class ResidualBlock(nn.Module):
     #     y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
     #     return y
 
-    def forword_imputation(self, y, base_shape):
+    def forward_imputation(self, y, base_shape):
         B, channel, K, L = base_shape
         # enc_out = self.enc_embedding(x_enc, x_mark_enc)
         # x = x.reshape(B, channel, K, L).permute(1, 0, 2, 3)
@@ -165,38 +167,6 @@ class ResidualBlock(nn.Module):
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
-    def forward_combined(self, combined, base_shape):
-        B, channel, K, L = base_shape
-
-        # # Reshape for time dimension
-        # if L > 1:
-        #     y_time = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        #     y_time = self.time_layer(y_time.permute(2, 0, 1)).permute(1, 2, 0)
-        #     y_time = y_time.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
-        # else:
-        #     y_time = y
-        #
-        # # Reshape for feature dimension
-        # if K > 1:
-        #     y_feature = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        #     y_feature = self.feature_layer(y_feature.permute(2, 0, 1)).permute(1, 2, 0)
-        #     y_feature = y_feature.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
-        # else:
-        #     y_feature = y
-        # print("y_time.shape=", y_time.shape)
-        # print("y_feature.shape=", y_feature.shape)
-        #
-        # # Combine time and feature dimensions using another Transformer layer
-        # # combined = torch.cat([y_time, y_feature], dim=1)
-        # combined = (y_time + y_feature) / 2
-        # combined = self.linear_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
-        # print(combined, combined.shape)
-        combined = combined.reshape(B, channel, K, L).reshape(B, channel, K * L)
-        combined = self.time_layer(combined.permute(2, 0, 1)).permute(1, 2, 0)
-        combined = combined.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
-
-        return combined
-
     def forward(self, x, cond_info, diffusion_emb):
         B, channel, K, L = x.shape
         base_shape = x.shape
@@ -205,14 +175,20 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y1 = self.forward_time(y, base_shape)
+        O_t_time = self.forward_time(y, base_shape)
 
         # # # print("y1:")
         # # # print(y, y.shape)
-        y2 = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        #
-        # y = (y1 + y2) / 2
-        y = torch.sigmoid(y1) * torch.tanh(y2)
+        O_t_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # method 1
+        # y = (O_t_time + O_t_feature) / 2
+        # method 2
+        # y = torch.sigmoid(O_t_time) * torch.tanh(O_t_feature)
+        # method 3
+        O_t_time = O_t_time.permute(2, 0, 1)
+        O_t_feature = O_t_feature.permute(2, 0, 1)
+        O_t = self.w_tf(torch.cat((O_t_time, O_t_feature), dim=-1))
+        y = O_t.permute(1, 2, 0)
 
         # y1 = self.forward_time(y, base_shape)
         # y2 = self.forward_feature(y, base_shape)
@@ -220,7 +196,7 @@ class ResidualBlock(nn.Module):
         # y = self.forward_combined(y, base_shape)
         # print("y2:")
         # print("ResidualBlock.forward y.shape", y.shape)
-        # y = self.forword_imputation(y, base_shape)
+        # y = self.forward_imputation(y, base_shape)
         # print(y, y.shape)
         # y = self.forward_transformer(y, base_shape)
         # y = self.forward_feature(y, base_shape)
