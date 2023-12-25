@@ -175,8 +175,8 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
-        y = self.forward_feature(y, base_shape)
+        # y = self.forward_time(y, base_shape)
+        # y = self.forward_feature(y, base_shape)
 
         # # # print("y1:")
         # # # print(y, y.shape)
@@ -186,12 +186,12 @@ class ResidualBlock(nn.Module):
         # method 2
         # y = torch.sigmoid(O_t_time) * torch.tanh(O_t_feature)
         # method 3
-        # O_t_time = self.forward_time(y, base_shape)
-        # O_t_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        # O_t_time = O_t_time.permute(2, 0, 1)
-        # O_t_feature = O_t_feature.permute(2, 0, 1)
-        # O_t = self.w_tf(torch.cat((O_t_time, O_t_feature), dim=-1))
-        # y = O_t.permute(1, 2, 0)
+        O_t_time = self.forward_time(y, base_shape)
+        O_t_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        O_t_time = O_t_time.permute(2, 0, 1)
+        O_t_feature = O_t_feature.permute(2, 0, 1)
+        O_t = self.w_tf(torch.cat((O_t_time, O_t_feature), dim=-1))
+        y = O_t.permute(1, 2, 0)
 
         # y1 = self.forward_time(y, base_shape)
         # y2 = self.forward_feature(y, base_shape)
