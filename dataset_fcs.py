@@ -42,7 +42,7 @@ class PM25_Dataset(Dataset):
             parse_dates=True,
         )
         df_gt = pd.read_csv(
-            "./data/ours/miss70.csv",
+            "./data/ours/miss50.csv",
             index_col="Datetime",
             parse_dates=True,
         )
