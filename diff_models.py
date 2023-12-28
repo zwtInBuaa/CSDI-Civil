@@ -175,11 +175,11 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        O_t_time = self.forward_time(y, base_shape)
-        O_t_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # O_t_time = self.forward_time(y, base_shape)
+        # O_t_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
 
-        # y = self.forward_time(y, base_shape)
-        # y = self.forward_feature(y, base_shape)
+        y = self.forward_time(y, base_shape)
+        y = self.forward_feature(y, base_shape)
 
         # # # print("y1:")
         # # # print(y, y.shape)
@@ -187,7 +187,7 @@ class ResidualBlock(nn.Module):
         # method 1
         # y = (O_t_time + O_t_feature) / 2
         # method 2
-        y = torch.sigmoid(O_t_time) * torch.tanh(O_t_feature)
+        # y = torch.sigmoid(O_t_time) * torch.tanh(O_t_feature)
         # method 3
 
         # O_t_time = O_t_time.permute(2, 0, 1)
