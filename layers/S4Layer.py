@@ -1162,7 +1162,7 @@ class S4(nn.Module):
 class S4Layer(nn.Module):
     '''S4 Layer that can be used as a drop-in replacement for a TransformerEncoder'''
 
-    def __init__(self, features, lmax, N=64, dropout=0.0, layer_norm=True):
+    def __init__(self, features, lmax, N=64, dropout=0.0, bidirectional=True, layer_norm=True):
         super().__init__()
         self.s4_layer = S4(d_model=features,
                            d_state=N,
