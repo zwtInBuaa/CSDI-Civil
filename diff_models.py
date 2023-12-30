@@ -104,13 +104,14 @@ class ResidualBlock(nn.Module):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
+        self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
         self.time_layer = S4Layer(features=channels, lmax=100)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
-        self.s4 = S4Layer(features=2 * channels, lmax=100, N=64, dropout=0.0, bidirectional=1, layer_norm=1)
+        self.s4 = S4Layer(features=2 * channels, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -142,12 +143,15 @@ class ResidualBlock(nn.Module):
         trans_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
         y = torch.sigmoid(s4_time) * torch.tanh(trans_feature)  # (B,channel,K*L)
-        y = self.mid_projection(y)
+        # y = self.mid_projection(y)
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
-        cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
+        cond_info = self.cond_projection1(cond_info)  # (B,2*channel,K*L)
+        # cond_info = self.s4(cond_info)
         y = y + cond_info
+
+        y = self.mid_projection(y)
 
         # y = self.s4(y.permute(2, 0, 1)).permute(1, 2, 0)
 
