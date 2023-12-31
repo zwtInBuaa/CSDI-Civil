@@ -109,7 +109,8 @@ class ResidualBlock(nn.Module):
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
         self.time_layer = S4Layer(features=channels, lmax=100)
-        self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.feature_layer = S4Layer(features=channels, lmax=100)
 
         self.s4 = S4Layer(features=2 * channels, lmax=100)
 
