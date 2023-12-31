@@ -33,8 +33,6 @@ parser.add_argument("--targetstrategy", type=str, default="mix", choices=["mix",
 parser.add_argument("--validationindex", type=int, default=0, help="index of month used for validation (value:[0-7])")
 parser.add_argument("--nsample", type=int, default=100)
 parser.add_argument("--unconditional", action="store_true")
-parser.add_argument("--gp_noise", action="store_true")
-
 args = parser.parse_args()
 print(args)
 
@@ -58,7 +56,7 @@ with open(foldername + "config.json", "w") as f:
 train_loader, valid_loader, test_loader, scaler, mean_scaler = get_dataloader(
     config["train"]["batch_size"], device=args.device, validindex=args.validationindex
 )
-model = CSDI_PM25(config, args.device, gp_noise=args.gp_noise, gp_sigma=0.02).to(args.device)
+model = CSDI_PM25(config, args.device).to(args.device)
 
 if args.modelfolder == "":
     train(

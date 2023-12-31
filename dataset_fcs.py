@@ -128,7 +128,6 @@ class PM25_Dataset(Dataset):
                          hist_index: hist_index + self.eval_length
                          ],
             "timepoints": np.arange(self.eval_length),
-            "times": np.arange(self.eval_length),
             "cut_length": self.cut_length[org_index],
         }
         # print(s)
