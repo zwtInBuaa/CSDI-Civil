@@ -3,12 +3,18 @@ import torch
 import torch.nn as nn
 from diff_models import diff_CSDI
 
+from noise import GaussianProcess
+
 
 class CSDI_base(nn.Module):
-    def __init__(self, target_dim, config, device):
+    def __init__(self, target_dim, config, device, gp_noise=False, gp_sigma=None):
         super().__init__()
         self.device = device
         self.target_dim = target_dim
+
+        self.gp_noise = gp_noise
+        if self.gp_noise:
+            self.gp = GaussianProcess(target_dim, sigma=gp_sigma)
 
         self.emb_time_dim = config["model"]["timeemb"]
         self.emb_feature_dim = config["model"]["featureemb"]
@@ -41,14 +47,13 @@ class CSDI_base(nn.Module):
 
         self.alpha_hat = 1 - self.beta
         self.alpha = np.cumprod(self.alpha_hat)
-
         self.alpha_torch = torch.tensor(self.alpha).float().to(self.device).unsqueeze(1).unsqueeze(1)
 
     def time_embedding(self, pos, d_model=128):
         pe = torch.zeros(pos.shape[0], pos.shape[1], d_model).to(self.device)
         position = pos.unsqueeze(2)
         div_term = 1 / torch.pow(
-            10000.0, torch.arange(0, d_model, 2).to(self.device) / d_model
+            10, torch.arange(0, d_model, 2).to(self.device) / d_model
         )
         pe[:, :, 0::2] = torch.sin(position * div_term)
         pe[:, :, 1::2] = torch.cos(position * div_term)
@@ -80,10 +85,10 @@ class CSDI_base(nn.Module):
                 cond_mask[i] = cond_mask[i] * for_pattern_mask[i - 1]
         return cond_mask
 
-    def get_side_info(self, observed_tp, cond_mask):
+    def get_side_info(self, observed_times, cond_mask):
         B, K, L = cond_mask.shape
 
-        time_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
+        time_embed = self.time_embedding(observed_times, self.emb_time_dim)  # (B,L,emb)
         time_embed = time_embed.unsqueeze(2).expand(-1, -1, K, -1)
         feature_embed = self.embed_layer(
             torch.arange(self.target_dim).to(self.device)
@@ -100,18 +105,18 @@ class CSDI_base(nn.Module):
         return side_info
 
     def calc_loss_valid(
-            self, observed_data, cond_mask, observed_mask, side_info, is_train
+            self, observed_data, cond_mask, observed_mask, observed_times, side_info, is_train
     ):
         loss_sum = 0
         for t in range(self.num_steps):  # calculate loss for all t
             loss = self.calc_loss(
-                observed_data, cond_mask, observed_mask, side_info, is_train, set_t=t
+                observed_data, cond_mask, observed_mask, observed_times, side_info, is_train, set_t=t
             )
             loss_sum += loss.detach()
         return loss_sum / self.num_steps
 
     def calc_loss(
-            self, observed_data, cond_mask, observed_mask, side_info, is_train, set_t=-1
+            self, observed_data, cond_mask, observed_mask, observed_times, side_info, is_train, set_t=-1
     ):
         B, K, L = observed_data.shape
         if is_train != 1:  # for validation
@@ -120,6 +125,13 @@ class CSDI_base(nn.Module):
             t = torch.randint(0, self.num_steps, [B]).to(self.device)
         current_alpha = self.alpha_torch[t]  # (B,1,1)
         noise = torch.randn_like(observed_data)
+
+        if self.gp_noise:
+            # Compute GP covariance matrix
+            L = self.gp.covariance_cholesky(t=observed_times.unsqueeze(-1))
+            # Replace normal noise with GP noise
+            noise = (L @ noise.transpose(-1, -2)).transpose(-1, -2)
+
         noisy_data = (current_alpha ** 0.5) * observed_data + (1.0 - current_alpha) ** 0.5 * noise
 
         total_input = self.set_input_to_diffmodel(noisy_data, observed_data, cond_mask)
@@ -142,10 +154,14 @@ class CSDI_base(nn.Module):
 
         return total_input
 
-    def impute(self, observed_data, cond_mask, side_info, n_samples):
+    def impute(self, observed_data, cond_mask, observed_times, side_info, n_samples):
         B, K, L = observed_data.shape
 
         imputed_samples = torch.zeros(B, n_samples, K, L).to(self.device)
+
+        # Precompute GP covariance matrix
+        if self.gp_noise:
+            L = self.gp.covariance_cholesky(t=observed_times.unsqueeze(-1))
 
         for i in range(n_samples):
             # generate noisy observation for unconditional model
@@ -154,10 +170,19 @@ class CSDI_base(nn.Module):
                 noisy_cond_history = []
                 for t in range(self.num_steps):
                     noise = torch.randn_like(noisy_obs)
+
+                    # Replace unit normal noise with GP noise
+                    if self.gp_noise:
+                        noise = (L @ noise.transpose(-1, -2)).transpose(-1, -2)
+
                     noisy_obs = (self.alpha_hat[t] ** 0.5) * noisy_obs + self.beta[t] ** 0.5 * noise
                     noisy_cond_history.append(noisy_obs * cond_mask)
 
             current_sample = torch.randn_like(observed_data)
+
+            # Replace initial unit normal noise with GP noise
+            if self.gp_noise:
+                current_sample = (L @ current_sample.transpose(-1, -2)).transpose(-1, -2)
 
             for t in range(self.num_steps - 1, -1, -1):
                 if self.is_unconditional == True:
@@ -175,9 +200,12 @@ class CSDI_base(nn.Module):
 
                 if t > 0:
                     noise = torch.randn_like(current_sample)
-                    sigma = (
-                                    (1.0 - self.alpha[t - 1]) / (1.0 - self.alpha[t]) * self.beta[t]
-                            ) ** 0.5
+
+                    # Replace unit normal noise with GP noise
+                    if self.gp_noise:
+                        noise = (L @ noise.transpose(-1, -2)).transpose(-1, -2)
+
+                    sigma = ((1.0 - self.alpha[t - 1]) / (1.0 - self.alpha[t]) * self.beta[t]) ** 0.5
                     current_sample += sigma * noise
 
             imputed_samples[:, i] = current_sample.detach()
@@ -187,7 +215,7 @@ class CSDI_base(nn.Module):
         (
             observed_data,
             observed_mask,
-            observed_tp,
+            observed_times,
             gt_mask,
             for_pattern_mask,
             _,
@@ -201,17 +229,17 @@ class CSDI_base(nn.Module):
         else:
             cond_mask = self.get_randmask(observed_mask)
 
-        side_info = self.get_side_info(observed_tp, cond_mask)
+        side_info = self.get_side_info(observed_times, cond_mask)
 
         loss_func = self.calc_loss if is_train == 1 else self.calc_loss_valid
 
-        return loss_func(observed_data, cond_mask, observed_mask, side_info, is_train)
+        return loss_func(observed_data, cond_mask, observed_mask, observed_times, side_info, is_train)
 
     def evaluate(self, batch, n_samples):
         (
             observed_data,
             observed_mask,
-            observed_tp,
+            observed_times,
             gt_mask,
             _,
             cut_length,
@@ -221,24 +249,25 @@ class CSDI_base(nn.Module):
             cond_mask = gt_mask
             target_mask = observed_mask - cond_mask
 
-            side_info = self.get_side_info(observed_tp, cond_mask)
+            side_info = self.get_side_info(observed_times, cond_mask)
 
-            samples = self.impute(observed_data, cond_mask, side_info, n_samples)
+            samples = self.impute(observed_data, cond_mask, observed_times, side_info, n_samples)
 
             for i in range(len(cut_length)):  # to avoid double evaluation
                 target_mask[i, ..., 0: cut_length[i].item()] = 0
-        return samples, observed_data, target_mask, observed_mask, observed_tp
+        return samples, observed_data, target_mask, observed_mask, observed_times
 
 
 class CSDI_PM25(CSDI_base):
-    def __init__(self, config, device, target_dim=72):
-        super(CSDI_PM25, self).__init__(target_dim, config, device)
+    def __init__(self, config, device, gp_noise=False, gp_sigma=None, target_dim=72):
+        super(CSDI_PM25, self).__init__(target_dim, config, device, gp_noise, gp_sigma)
 
     def process_data(self, batch):
         observed_data = batch["observed_data"].to(self.device).float()
         observed_mask = batch["observed_mask"].to(self.device).float()
         observed_tp = batch["timepoints"].to(self.device).float()
         gt_mask = batch["gt_mask"].to(self.device).float()
+        observed_times = batch["times"].to(self.device).float()
         cut_length = batch["cut_length"].to(self.device).long()
         for_pattern_mask = batch["hist_mask"].to(self.device).float()
 
@@ -250,7 +279,7 @@ class CSDI_PM25(CSDI_base):
         return (
             observed_data,
             observed_mask,
-            observed_tp,
+            observed_times,
             gt_mask,
             for_pattern_mask,
             cut_length,
@@ -258,13 +287,14 @@ class CSDI_PM25(CSDI_base):
 
 
 class CSDI_Physio(CSDI_base):
-    def __init__(self, config, device, target_dim=98):
-        super(CSDI_Physio, self).__init__(target_dim, config, device)
+    def __init__(self, config, device, gp_noise=False, gp_sigma=None, target_dim=35):
+        super(CSDI_Physio, self).__init__(target_dim, config, device, gp_noise, gp_sigma)
 
     def process_data(self, batch):
         observed_data = batch["observed_data"].to(self.device).float()
         observed_mask = batch["observed_mask"].to(self.device).float()
         observed_tp = batch["timepoints"].to(self.device).float()
+        observed_times = batch["times"].to(self.device).float()
         gt_mask = batch["gt_mask"].to(self.device).float()
 
         observed_data = observed_data.permute(0, 2, 1)
@@ -277,7 +307,7 @@ class CSDI_Physio(CSDI_base):
         return (
             observed_data,
             observed_mask,
-            observed_tp,
+            observed_times,
             gt_mask,
             for_pattern_mask,
             cut_length,
