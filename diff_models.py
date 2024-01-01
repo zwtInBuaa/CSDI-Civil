@@ -148,8 +148,6 @@ class ResidualBlock(nn.Module):
         # cond_info = self.s4(cond_info)
         y = y + cond_info
 
-        y = self.mid_projection(y)
-
         # y = self.s4(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         gate, filter = torch.chunk(y, 2, dim=1)
