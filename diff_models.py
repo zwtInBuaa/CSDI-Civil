@@ -15,6 +15,7 @@ def get_torch_trans(heads=8, layers=1, channels=64):
 
 def Conv1d_with_init(in_channels, out_channels, kernel_size):
     layer = nn.Conv1d(in_channels, out_channels, kernel_size)
+    layer = nn.utils.weight_norm(layer)
     nn.init.kaiming_normal_(layer.weight)
     return layer
 
@@ -59,16 +60,10 @@ class diff_CSDI(nn.Module):
         )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
-        self.input_projection = nn.utils.weight_norm(self.input_projection)
-        nn.init.kaiming_normal_(self.input_projection.weight)
 
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
-        self.output_projection1 = nn.utils.weight_norm(self.output_projection1)
-        nn.init.kaiming_normal_(self.output_projection1.weight)
 
         self.output_projection2 = Conv1d_with_init(self.channels, 1, 1)
-        self.output_projection2 = nn.utils.weight_norm(self.output_projection2)
-        nn.init.kaiming_normal_(self.output_projection2.weight)
         # nn.init.zeros_(self.output_projection2.weight)
 
         self.residual_layers = nn.ModuleList(
@@ -113,17 +108,8 @@ class ResidualBlock(nn.Module):
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
 
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
-        # self.cond_projection = Conv1d_with_init(side_dim, channels, 1)
-        self.cond_projection = nn.utils.weight_norm(self.cond_projection)
-        nn.init.kaiming_normal_(self.cond_projection.weight)
-
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
-        self.mid_projection = nn.utils.weight_norm(self.mid_projection)
-        nn.init.kaiming_normal_(self.mid_projection.weight)
-
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
-        self.output_projection = nn.utils.weight_norm(self.output_projection)
-        nn.init.kaiming_normal_(self.output_projection.weight)
 
         self.s4layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
@@ -156,9 +142,9 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        # y = self.s4layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.s4layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
-        y = self.forward_time(y, base_shape)
+        # y = self.forward_time(y, base_shape)
         # y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
