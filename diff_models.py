@@ -59,9 +59,7 @@ class diff_CSDI(nn.Module):
         )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
-
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
-
         self.output_projection2 = Conv1d_with_init(self.channels, 1, 1)
         # nn.init.zeros_(self.output_projection2.weight)
 
@@ -139,6 +137,7 @@ class ResidualBlock(nn.Module):
         x = x.reshape(B, channel, K * L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
+        print(diffusion_emb.shape)
         y = x + diffusion_emb
 
         # y = self.s4layer(y.permute(2, 0, 1)).permute(1, 2, 0)
