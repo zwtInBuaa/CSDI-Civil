@@ -111,7 +111,7 @@ class ResidualBlock(nn.Module):
 
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.mid_projection = nn.utils.weight_norm(self.cond_projection)
-        nn.init.kaiming_normal_(self.cond_projection.weight)
+        nn.init.kaiming_normal_(self.mid_projection.weight)
 
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = nn.utils.weight_norm(self.output_projection)
