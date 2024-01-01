@@ -59,9 +59,17 @@ class diff_CSDI(nn.Module):
         )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
+        self.input_projection = nn.utils.weight_norm(self.input_projection)
+        nn.init.kaiming_normal_(self.input_projection.weight)
+
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
+        self.output_projection1 = nn.utils.weight_norm(self.output_projection1)
+        nn.init.kaiming_normal_(self.output_projection1.weight)
+
         self.output_projection2 = Conv1d_with_init(self.channels, 1, 1)
-        nn.init.zeros_(self.output_projection2.weight)
+        self.output_projection2 = nn.utils.weight_norm(self.output_projection2)
+        nn.init.kaiming_normal_(self.output_projection2.weight)
+        # nn.init.zeros_(self.output_projection2.weight)
 
         self.residual_layers = nn.ModuleList(
             [
@@ -146,9 +154,9 @@ class ResidualBlock(nn.Module):
         x = x.reshape(B, channel, K * L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
-        # y = x + diffusion_emb
+        y = x + diffusion_emb
 
-        y = self.s4layer(x.permute(2, 0, 1)).permute(1, 2, 0) + diffusion_emb
+        # y = self.s4layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         y_time = self.forward_time(y, base_shape)
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
