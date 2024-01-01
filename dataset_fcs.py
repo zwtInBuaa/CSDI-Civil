@@ -6,7 +6,7 @@ import torch
 
 
 class PM25_Dataset(Dataset):
-    def __init__(self, eval_length=45, target_dim=72, mode="train", validindex=0):
+    def __init__(self, eval_length=36, target_dim=72, mode="train", validindex=0):
         self.eval_length = eval_length
         self.target_dim = target_dim
 
@@ -81,7 +81,6 @@ class PM25_Dataset(Dataset):
                 if len(current_df) % eval_length != 0:  # avoid double-count for the last time-series
                     self.use_index += [len(self.index_month) - 1]
                     self.cut_length += [eval_length - len(current_df) % eval_length]
-            print(month_list[i], c_data, c_data.shape)
         if mode != "test":
             self.use_index = np.arange(len(self.index_month))
             self.cut_length = [0] * len(self.use_index)
