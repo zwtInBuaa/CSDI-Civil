@@ -81,6 +81,7 @@ class PM25_Dataset(Dataset):
                 if len(current_df) % eval_length != 0:  # avoid double-count for the last time-series
                     self.use_index += [len(self.index_month) - 1]
                     self.cut_length += [eval_length - len(current_df) % eval_length]
+
         if mode != "test":
             self.use_index = np.arange(len(self.index_month))
             self.cut_length = [0] * len(self.use_index)
