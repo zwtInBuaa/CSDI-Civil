@@ -50,6 +50,9 @@ class PM25_Dataset(Dataset):
             current_df = df[df.index.month == month_list[i]]
             current_df_gt = df_gt[df_gt.index.month == month_list[i]]
             current_length = len(current_df) - eval_length + 1
+            print("it is %d-th month" % i)
+            print(len(current_df))
+            print(current_df)
 
             last_index = len(self.index_month)
             self.index_month += np.array([i] * current_length).tolist()
