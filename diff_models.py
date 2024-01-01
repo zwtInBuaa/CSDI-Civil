@@ -112,7 +112,7 @@ class ResidualBlock(nn.Module):
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.s4layer = S4Layer(features=channels, lmax=100)
+        self.s4_layer = S4Layer(features=channels, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -140,7 +140,7 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.s4(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.s4_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
 
 
