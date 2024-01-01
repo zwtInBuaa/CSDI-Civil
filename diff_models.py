@@ -109,8 +109,8 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.s4layer = S4Layer(features=channels, lmax=100)
-        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.time_layer = S4Layer(features=channels, lmax=100)
+        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.feature_layer = S4Layer(features=channels, lmax=100)
 
@@ -139,8 +139,6 @@ class ResidualBlock(nn.Module):
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
-
-        y = self.s4layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         y_time = self.forward_time(y, base_shape)
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
