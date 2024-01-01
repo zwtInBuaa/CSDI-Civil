@@ -104,7 +104,8 @@ class ResidualBlock(nn.Module):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
 
-        self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
+        # self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
+        self.cond_projection = Conv1d_with_init(side_dim, channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
@@ -137,17 +138,15 @@ class ResidualBlock(nn.Module):
         x = x.reshape(B, channel, K * L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
-        print(x.shape)
-        print(diffusion_emb.shape)
         y = x + diffusion_emb
 
-        # y = self.s4layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.s4layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
-        y = self.forward_time(y, base_shape)
-        # y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
+        y_time = self.forward_time(y, base_shape)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
-        y = self.mid_projection(y)
+        # y = self.mid_projection(y)
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
@@ -155,7 +154,7 @@ class ResidualBlock(nn.Module):
         # cond_info = self.s4(cond_info)
         y = y + cond_info
 
-        # y = self.mid_projection(y)
+        y = self.mid_projection(y)
 
         # y = self.s4(y.permute(2, 0, 1)).permute(1, 2, 0)
 
