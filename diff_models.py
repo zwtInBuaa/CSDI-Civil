@@ -105,13 +105,14 @@ class ResidualBlock(nn.Module):
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
 
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
+        self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.time_layer = S4Layer(features=channels, lmax=100)
-        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.time_layer = S4Layer(features=channels, lmax=100)
+        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        # self.feature_layer = S4Layer(features=channels, lmax=100)
+        self.s4layer = S4Layer(features=channels, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -139,21 +140,25 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
+        y = self.s4(y.permute(2, 0, 1)).permute(1, 2, 0)
+
+
+
+        y_time = self.forward_time(y, base_shape)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
-        y = self.mid_projection(y)
+        # y = self.mid_projection(y)
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
-        cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
+        cond_info = self.cond_projection1(cond_info)  # (B,2*channel,K*L)
         # cond_info = self.s4(cond_info)
         y = y + cond_info
 
-        # y = self.mid_projection(y)
+        y = self.mid_projection(y)
 
-        # y = self.s4(y.permute(2, 0, 1)).permute(1, 2, 0)
+
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
