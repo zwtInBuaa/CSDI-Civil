@@ -15,7 +15,6 @@ def get_torch_trans(heads=8, layers=1, channels=64):
 
 def Conv1d_with_init(in_channels, out_channels, kernel_size):
     layer = nn.Conv1d(in_channels, out_channels, kernel_size)
-    layer = nn.utils.weight_norm(layer)
     nn.init.kaiming_normal_(layer.weight)
     return layer
 
