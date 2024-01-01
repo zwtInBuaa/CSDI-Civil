@@ -50,9 +50,6 @@ class PM25_Dataset(Dataset):
             current_df = df[df.index.month == month_list[i]]
             current_df_gt = df_gt[df_gt.index.month == month_list[i]]
             current_length = len(current_df) - eval_length + 1
-            print("it is %d-th month" % i)
-            print(len(current_df))
-            print(current_df)
 
             last_index = len(self.index_month)
             self.index_month += np.array([i] * current_length).tolist()
@@ -84,7 +81,7 @@ class PM25_Dataset(Dataset):
                 if len(current_df) % eval_length != 0:  # avoid double-count for the last time-series
                     self.use_index += [len(self.index_month) - 1]
                     self.cut_length += [eval_length - len(current_df) % eval_length]
-
+            print(month_list[i], c_data)
         if mode != "test":
             self.use_index = np.arange(len(self.index_month))
             self.cut_length = [0] * len(self.use_index)
