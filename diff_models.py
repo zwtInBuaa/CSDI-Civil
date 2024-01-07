@@ -81,8 +81,8 @@ class diff_CSDI(nn.Module):
 
     def forward(self, x, cond_info, diffusion_step):
         cond_x, x = torch.chunk(x, 2, dim=1)
-        cond_x = self.cond_x_input_projection(torch.squeeze(cond_x, dim=1))
-        x = self.x_input_projection(torch.squeeze(x, dim=1))  # (B,K,L)
+        cond_x = self.cond_x_input_projection(torch.squeeze(cond_x, dim=1)).unsqueeze(1)  # (B,1,K,L)
+        x = self.x_input_projection(torch.squeeze(x, dim=1)).unsqueeze(1)  # (B,1,K,L)
 
         x = torch.cat([cond_x, x], dim=1)  # (B,2,K,L)
 
