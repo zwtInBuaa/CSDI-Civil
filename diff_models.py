@@ -14,8 +14,9 @@ def get_torch_trans(heads=8, layers=1, channels=64):
     return nn.TransformerEncoder(encoder_layer, num_layers=layers)
 
 
-def Conv1d_with_init(in_channels, out_channels, kernel_size):
-    layer = nn.Conv1d(in_channels, out_channels, kernel_size)
+def Conv1d_with_init(in_channels, out_channels, kernel_size=1, dilation=1, stride=1):
+    padding = dilation * (kernel_size - 1) // 2
+    layer = nn.Conv1d(in_channels, out_channels, kernel_size, dilation=dilation, padding=padding, stride=stride)
     nn.init.kaiming_normal_(layer.weight)
     return layer
 
@@ -211,7 +212,8 @@ class diff_CSDI(nn.Module):
                 diffusion_embedding_dim=config["diffusion_embedding_dim"],
                 layer=layer,
                 dropout=dropout,
-                nheads=config["nheads"]
+                nheads=config["nheads"],
+                stride=stride
             )
 
         def ff_block(dim, stride):
@@ -226,7 +228,8 @@ class diff_CSDI(nn.Module):
                 diffusion_embedding_dim=config["diffusion_embedding_dim"],
                 layer=layer,
                 dropout=dropout,
-                nheads=config["nheads"]
+                nheads=config["nheads"],
+                stride=stride
             )
 
         # Down blocks
@@ -368,13 +371,13 @@ class diff_CSDI(nn.Module):
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, side_dim, channels, layer, dropout, diffusion_embedding_dim, nheads):
+    def __init__(self, side_dim, channels, layer, dropout, diffusion_embedding_dim, nheads, stride):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
 
-        self.cond_projection = Conv1d_with_init(side_dim, channels, 1)
-        self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
-        self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
+        self.cond_projection = Conv1d_with_init(side_dim, channels, kernel_size=stride, stride=stride)
+        # self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
+        # self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
