@@ -296,13 +296,14 @@ class diff_CSDI(nn.Module):
 
         # down blocks
         outputs = [x]
+        i = 0
         for layer in self.d_layers:
             if isinstance(layer, ResidualBlock):
                 x = layer(x, base_shape, cond_info, diffusion_emb)
             else:
                 x = layer(x)
             outputs.append(x)
-            print("d_layers x: ", x.shape)
+            print("%d-th d_layers x: " % i, x.shape)
 
         # center block
         for layer in self.c_layers:
