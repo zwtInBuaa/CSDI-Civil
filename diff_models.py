@@ -95,7 +95,7 @@ class diff_CSDI(nn.Module):
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
 
-        history_x = torch.tensor([x])
+        history_x = x.unsqueeze(0)
         skip = []
         for layer in self.residual_layers:
             x = torch.mean(history_x, dim=0)
