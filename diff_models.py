@@ -286,6 +286,8 @@ class diff_CSDI(nn.Module):
         x = x.reshape(B, self.channels, K, L)
         base_shape = x.shape
 
+        print("init x: ", x.shape)
+
         diffusion_emb = self.diffusion_embedding(diffusion_step)
 
         # down blocks
@@ -296,6 +298,7 @@ class diff_CSDI(nn.Module):
             else:
                 x = layer(x)
             outputs.append(x)
+            print("d_layers x: ", x.shape)
 
         # center block
         for layer in self.c_layers:
@@ -303,6 +306,7 @@ class diff_CSDI(nn.Module):
                 x = layer(x, base_shape, cond_info, diffusion_emb)
             else:
                 x = layer(x)
+            print("c_layers x: ", x.shape)
         x = x + outputs.pop()  # add a skip connection to the last output of the down block
 
         # Up blocks
@@ -313,6 +317,7 @@ class diff_CSDI(nn.Module):
                         x = layer(x, base_shape, cond_info, diffusion_emb)
                     else:
                         x = layer(x)
+                    print("u_layers x: ", x.shape)
                     x = x + outputs.pop()  # skip connection
             else:
                 for layer in block:
@@ -320,6 +325,7 @@ class diff_CSDI(nn.Module):
                         x = layer(x, base_shape, cond_info, diffusion_emb)
                     else:
                         x = layer(x)
+                    print("u_layers x: ", x.shape)
                     if isinstance(layer, UpPool):
                         # Before modeling layer in the block
                         x = x + outputs.pop()
