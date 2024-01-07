@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import copy
-from layers.S4Layer import S4Layer
+from einops import rearrange
+from layers.S4Layer import S4, S4Layer, LinearActivation
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -17,6 +18,153 @@ def Conv1d_with_init(in_channels, out_channels, kernel_size):
     layer = nn.Conv1d(in_channels, out_channels, kernel_size)
     nn.init.kaiming_normal_(layer.weight)
     return layer
+
+
+class Conv(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size=3, dilation=1, stride=1):
+        super(Conv, self).__init__()
+        self.padding = dilation * (kernel_size - 1) // 2
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size,
+                              dilation=dilation,
+                              padding=self.padding,
+                              stride=stride)
+
+        self.conv = nn.utils.weight_norm(self.conv)
+        nn.init.kaiming_normal_(self.conv.weight)
+
+    def forward(self, x):
+        out = self.conv(x)
+        return out
+
+
+class DownPool(nn.Module):
+    def __init__(self, d_input, expand, pool):
+        super().__init__()
+        self.d_output = d_input * expand
+        self.pool = pool
+
+        self.linear = LinearActivation(
+            d_input * pool,
+            self.d_output,
+            transposed=True,
+            weight_norm=True,
+        )
+
+    def forward(self, x):
+        x = rearrange(x, '... h (l s) -> ... (h s) l', s=self.pool)
+        x = self.linear(x)
+        return x
+
+    def step(self, x, state, **kwargs):
+        """
+        x: (..., H)
+        """
+
+        if x is None: return None, state
+        state.append(x)
+        if len(state) == self.pool:
+            x = rearrange(torch.stack(state, dim=-1), '... h s -> ... (h s)')
+            x = x.unsqueeze(-1)
+            x = self.linear(x)
+            x = x.squeeze(-1)
+            return x, []
+        else:
+            return None, state
+
+    def default_state(self, *args, **kwargs):
+        return []
+
+
+class UpPool(nn.Module):
+    def __init__(self, d_input, expand, pool, causal=True):
+        super().__init__()
+        self.d_output = d_input // expand
+        self.pool = pool
+        self.causal = causal
+
+        self.linear = LinearActivation(
+            d_input,
+            self.d_output * pool,
+            transposed=True,
+            weight_norm=True,
+        )
+
+    def forward(self, x):
+        x = self.linear(x)
+
+        if (self.causal):
+            x = F.pad(x[..., :-1], (1, 0))  # Shift to ensure causality
+        x = rearrange(x, '... (h s) l -> ... h (l s)', s=self.pool)
+
+        return x
+
+    def step(self, x, state, **kwargs):
+        """
+        x: (..., H)
+        """
+        assert len(state) > 0
+        y, state = state[0], state[1:]
+        if len(state) == 0:
+            assert x is not None
+            x = x.unsqueeze(-1)
+            x = self.linear(x)
+            x = x.squeeze(-1)
+            x = rearrange(x, '... (h s) -> ... h s', s=self.pool)
+            state = list(torch.unbind(x, dim=-1))
+        else:
+            assert x is None
+        return y, state
+
+    def default_state(self, *batch_shape, device=None):
+        state = torch.zeros(batch_shape + (self.d_output, self.pool), device=device)  # (batch, h, s)
+        state = list(torch.unbind(state, dim=-1))  # List of (..., H)
+        return state
+
+
+class FFBlock(nn.Module):
+
+    def __init__(self, d_model, expand=2, dropout=0.0):
+        """
+        Feed-forward block.
+
+        Args:
+            d_model: dimension of input
+            expand: expansion factor for inverted bottleneck
+            dropout: dropout rate
+        """
+        super().__init__()
+
+        input_linear = LinearActivation(
+            d_model,
+            d_model * expand,
+            transposed=True,
+            activation='gelu',
+            activate=True,
+        )
+        dropout = nn.Dropout2d(dropout) if dropout > 0.0 else nn.Identity()
+        output_linear = LinearActivation(
+            d_model * expand,
+            d_model,
+            transposed=True,
+            activation=None,
+            activate=False,
+        )
+
+        self.ff = nn.Sequential(
+            input_linear,
+            dropout,
+            output_linear,
+        )
+
+    def forward(self, x):
+        return self.ff(x), None
+
+    def default_state(self, *args, **kwargs):
+        return None
+
+    def step(self, x, state, **kwargs):
+        # expects: (B, D, L)
+        return self.ff(x.unsqueeze(-1)).squeeze(-1), state
 
 
 class DiffusionEmbedding(nn.Module):
@@ -49,9 +197,29 @@ class DiffusionEmbedding(nn.Module):
 
 
 class diff_CSDI(nn.Module):
-    def __init__(self, config, inputdim=2):
+
+    def __init__(
+            self,
+            config,
+            inputdim=2,
+            pool=[2, 2],
+            expand=2,
+            ff=2,
+            glu=True,
+            unet=True,
+            dropout=0.0,
+            bidirectional=True,
+            s4_lmax=1,
+            s4_d_state=64,
+            s4_dropout=0.0,
+            s4_bidirectional=True,
+    ):
         super().__init__()
-        self.channels = config["channels"]
+
+        self.channels = H = config["channels"]
+        self.unet = unet
+
+        self.n_layers = config["layers"]
 
         self.diffusion_embedding = DiffusionEmbedding(
             num_steps=config["num_steps"],
@@ -61,36 +229,147 @@ class diff_CSDI(nn.Module):
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
         self.output_projection2 = Conv1d_with_init(self.channels, 1, 1)
+
         # nn.init.zeros_(self.output_projection2.weight)
 
-        self.residual_layers = nn.ModuleList(
-            [
-                ResidualBlock(
-                    side_dim=config["side_dim"],
-                    channels=self.channels,
-                    diffusion_embedding_dim=config["diffusion_embedding_dim"],
-                    nheads=config["nheads"],
-                )
-                for _ in range(config["layers"])
-            ]
-        )
+        def s4_block(self, dim, stride):
+            layer = S4(
+                d_model=dim,
+                l_max=s4_lmax,
+                d_state=s4_d_state,
+                bidirectional=s4_bidirectional,
+                postact='glu' if glu else None,
+                dropout=dropout,
+                transposed=True,
+                # hurwitz=True, # use the Hurwitz parameterization for stability
+                # tie_state=True, # tie SSM parameters across d_state in the S4 layer
+                trainable={
+                    'dt': True,
+                    'A': True,
+                    'P': True,
+                    'B': True,
+                },  # train all internal S4 parameters
+            )
+
+            # def __init__(self, side_dim, channels, layer, dropout, diffusion_embedding_dim, nheads):
+
+            return ResidualBlock(
+                side_dim=config["side_dim"],
+                channels=self.channels,
+                diffusion_embedding_dim=config["diffusion_embedding_dim"],
+                layer=layer,
+                dropout=dropout,
+                nheads=config["nheads"]
+            )
+
+        def ff_block(dim, stride):
+            layer = FFBlock(
+                d_model=dim,
+                expand=ff,
+                dropout=dropout,
+            )
+            return ResidualBlock(
+                side_dim=config["side_dim"],
+                channels=self.channels,
+                diffusion_embedding_dim=config["diffusion_embedding_dim"],
+                layer=layer,
+                dropout=dropout,
+                nheads=config["nheads"]
+            )
+
+        # Down blocks
+        d_layers = []
+        for i, p in enumerate(pool):
+            if unet:
+                # Add blocks in the down layers
+                for _ in range(self.n_layers):
+                    if i == 0:
+                        d_layers.append(s4_block(H, 1))
+                        if ff > 0: d_layers.append(ff_block(H, 1))
+                    elif i == 1:
+                        d_layers.append(s4_block(H, p))
+                        if ff > 0: d_layers.append(ff_block(H, p))
+            # Add sequence downsampling and feature expanding
+            d_layers.append(DownPool(H, expand, p))
+            H *= expand
+
+            # Center block
+        c_layers = []
+        for _ in range(self.n_layers):
+            c_layers.append(s4_block(H, pool[1] * 2))
+            if ff > 0: c_layers.append(ff_block(H, pool[1] * 2))
+
+        # Up blocks
+        u_layers = []
+        for i, p in enumerate(pool[::-1]):
+            block = []
+            H //= expand
+            block.append(UpPool(H * expand, expand, p, causal=not bidirectional))
+
+            for _ in range(self.n_layers):
+                if i == 0:
+                    block.append(s4_block(H, pool[0]))
+                    if ff > 0: block.append(ff_block(H, pool[0]))
+
+                elif i == 1:
+                    block.append(s4_block(H, 1))
+                    if ff > 0: block.append(ff_block(H, 1))
+
+            u_layers.append(nn.ModuleList(block))
+
+        self.d_layers = nn.ModuleList(d_layers)
+        self.c_layers = nn.ModuleList(c_layers)
+        self.u_layers = nn.ModuleList(u_layers)
+
+        self.norm = nn.LayerNorm(H)
 
     def forward(self, x, cond_info, diffusion_step):
-        B, inputdim, K, L = x.shape
-
-        x = x.reshape(B, inputdim, K * L)
+        B, input_dim, K, L = x.shape
+        x = x.reshape(B, input_dim, K * L)
         x = self.input_projection(x)
         x = F.relu(x)
-        x = x.reshape(B, self.channels, K, L)
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
 
-        skip = []
-        for layer in self.residual_layers:
-            x, skip_connection = layer(x, cond_info, diffusion_emb)
-            skip.append(skip_connection)
+        # down blocks
+        outputs = [x]
+        for layer in self.d_layers:
+            if isinstance(layer, ResidualBlock):
+                x = layer(x, cond_info, diffusion_emb)
+            else:
+                x = layer(x)
+            outputs.append(x)
 
-        x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
+        # center block
+        for layer in self.c_layers:
+            if isinstance(layer, ResidualBlock):
+                x = layer(x, cond_info, diffusion_emb)
+            else:
+                x = layer(x)
+        x = x + outputs.pop()  # add a skip connection to the last output of the down block
+
+        # Up blocks
+        for block in self.u_layers:
+            if self.unet:
+                for layer in block:
+                    if isinstance(layer, ResidualBlock):
+                        x = layer(x, cond_info, diffusion_emb)
+                    else:
+                        x = layer(x)
+                    x = x + outputs.pop()  # skip connection
+            else:
+                for layer in block:
+                    if isinstance(layer, ResidualBlock):
+                        x = layer(x, cond_info, diffusion_emb)
+                    else:
+                        x = layer(x)
+                    if isinstance(layer, UpPool):
+                        # Before modeling layer in the block
+                        x = x + outputs.pop()
+                        outputs.append(x)
+                x = x + outputs.pop()  # add a skip connection from the input of the modeling part of this up block
+
+        # feature projection
         x = x.reshape(B, self.channels, K * L)
         x = self.output_projection1(x)  # (B,channel,K*L)
         x = F.relu(x)
@@ -98,21 +377,49 @@ class diff_CSDI(nn.Module):
         x = x.reshape(B, K, L)
         return x
 
+        # def forward(self, x, cond_info, diffusion_step):
+
+
+#     B, inputdim, K, L = x.shape
+#
+#     x = x.reshape(B, inputdim, K * L)
+#     x = self.input_projection(x)
+#     x = F.relu(x)
+#     x = x.reshape(B, self.channels, K, L)
+#
+#     diffusion_emb = self.diffusion_embedding(diffusion_step)
+#
+#     skip = []
+#     for layer in self.residual_layers:
+#         x, skip_connection = layer(x, cond_info, diffusion_emb)
+#         skip.append(skip_connection)
+#
+#     x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
+#     x = x.reshape(B, self.channels, K * L)
+#     x = self.output_projection1(x)  # (B,channel,K*L)
+#     x = F.relu(x)
+#     x = self.output_projection2(x)  # (B,1,K*L)
+#     x = x.reshape(B, K, L)
+#     return x
+
 
 class ResidualBlock(nn.Module):
-    def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
+    def __init__(self, side_dim, channels, layer, dropout, diffusion_embedding_dim, nheads):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
 
-        self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
-        self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
+        self.cond_projection = Conv1d_with_init(side_dim, channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.s4_layer = S4Layer(features=channels, lmax=100)
+        # self.s4_layer = S4Layer(features=channels, lmax=100)
+
+        self.norm = nn.LayerNorm(channels)
+        self.dropout = nn.Dropout2d(dropout) if dropout > 0.0 else nn.Identity()
+        self.s4_layer = layer
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -140,9 +447,10 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.s4_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        # Pre norm
+        y = self.norm(y.transpose(-1, -2)).transpose(-1, -2)
 
-
+        y, _ = self.s4_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         y_time = self.forward_time(y, base_shape)
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
@@ -152,20 +460,14 @@ class ResidualBlock(nn.Module):
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
-        cond_info = self.cond_projection1(cond_info)  # (B,2*channel,K*L)
+        cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         # cond_info = self.s4(cond_info)
         y = y + cond_info
 
-        y = self.mid_projection(y)
+        # Dropout on the output of the layer
+        y = self.dropout(y)
 
+        # Residual connection
+        x = x + y
 
-
-        gate, filter = torch.chunk(y, 2, dim=1)
-        y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
-        y = self.output_projection(y)
-
-        residual, skip = torch.chunk(y, 2, dim=1)
-        x = x.reshape(base_shape)
-        residual = residual.reshape(base_shape)
-        skip = skip.reshape(base_shape)
-        return (x + residual) / math.sqrt(2.0), skip
+        return x
