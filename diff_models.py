@@ -441,11 +441,11 @@ class ResidualBlock(nn.Module):
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
-    def forward(self, x, base_shape, cond_info, diffusion_emb):
-        x = x.reshape(base_shape)
+    def forward(self, x, x_shape, cond_info, diffusion_emb):
+        x = x.reshape(x_shape)
         B, channel, K, L = x.shape
         base_shape = x.shape
-        # x = x.reshape(B, channel, K * L)
+        x = x.reshape(B, channel, K * L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
