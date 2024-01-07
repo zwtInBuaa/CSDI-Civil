@@ -52,6 +52,7 @@ class diff_CSDI(nn.Module):
     def __init__(self, config, inputdim=2):
         super().__init__()
         self.channels = config["channels"]
+        self.feature_dim = 72  # 特征个数
 
         self.diffusion_embedding = DiffusionEmbedding(
             num_steps=config["num_steps"],
@@ -59,6 +60,9 @@ class diff_CSDI(nn.Module):
         )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
+        self.x_input_projection = Conv1d_with_init(self.feature_dim, self.feature_dim, 1)
+        self.cond_x_input_projection = Conv1d_with_init(self.feature_dim, self.feature_dim, 1)
+
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
         self.output_projection2 = Conv1d_with_init(self.channels, 1, 1)
         # nn.init.zeros_(self.output_projection2.weight)
@@ -76,6 +80,12 @@ class diff_CSDI(nn.Module):
         )
 
     def forward(self, x, cond_info, diffusion_step):
+        cond_x, x = x.chunk(x, 2, dim=1)
+        x = self.x_input_projection(x)  # (B,K,L)
+        cond_x = self.cond_x_input_projection(cond_x)
+
+        x = torch.cat([cond_x, x], dim=1)  # (B,2,K,L)
+
         B, inputdim, K, L = x.shape
 
         x = x.reshape(B, inputdim, K * L)
@@ -142,8 +152,6 @@ class ResidualBlock(nn.Module):
 
         y = self.s4_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
-
-
         y_time = self.forward_time(y, base_shape)
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
@@ -157,8 +165,6 @@ class ResidualBlock(nn.Module):
         y = y + cond_info
 
         y = self.mid_projection(y)
-
-
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
