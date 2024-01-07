@@ -471,4 +471,6 @@ class ResidualBlock(nn.Module):
         # Residual connection
         x = x + y
 
+        x = x.reshape(base_shape)
+
         return x
