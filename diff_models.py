@@ -419,6 +419,7 @@ class ResidualBlock(nn.Module):
 
         # Pre norm
         y = self.norm(y.transpose(-1, -2)).transpose(-1, -2)
+        print(y.shape)
 
         y, _ = self.s4_layer(y)
 
