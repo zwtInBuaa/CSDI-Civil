@@ -80,7 +80,7 @@ class diff_CSDI(nn.Module):
         )
 
     def forward(self, x, cond_info, diffusion_step):
-        cond_x, x = x.chunk(x, 2, dim=1)
+        cond_x, x = torch.chunk(x, 2, dim=1)
         x = self.x_input_projection(x)  # (B,K,L)
         cond_x = self.cond_x_input_projection(cond_x)
 
