@@ -285,6 +285,7 @@ class diff_CSDI(nn.Module):
         x = F.relu(x)
         x = x.reshape(B, self.channels, K, L)
         base_shape = x.shape
+        x = x.reshape(B, self.channels, K * L)
 
         print("init x: ", x.shape)
 
