@@ -232,7 +232,7 @@ class diff_CSDI(nn.Module):
 
         # nn.init.zeros_(self.output_projection2.weight)
 
-        def s4_block(self, dim, stride):
+        def s4_block(dim, stride):
             layer = S4(
                 d_model=dim,
                 l_max=s4_lmax,
