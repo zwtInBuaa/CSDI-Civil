@@ -451,7 +451,7 @@ class ResidualBlock(nn.Module):
         # Pre norm
         y = self.norm(y.transpose(-1, -2)).transpose(-1, -2)
 
-        y, _ = self.s4_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y, _ = self.s4_layer(y)
 
         y_time = self.forward_time(y, base_shape)
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
