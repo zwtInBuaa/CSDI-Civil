@@ -303,7 +303,7 @@ class diff_CSDI(nn.Module):
             else:
                 x = layer(x)
 
-            tmp = 1 if x.shape[1] > base_shape[1] else 2
+            tmp = 2 if x.shape[1] > base_shape[1] else 1
             base_shape = (B, x.shape[1], K, L // tmp)
 
             outputs.append(x)
@@ -316,7 +316,7 @@ class diff_CSDI(nn.Module):
                 x = layer(x, base_shape, cond_info, diffusion_emb)
             else:
                 x = layer(x)
-            tmp = 1 if x.shape[1] > base_shape[1] else 2
+            tmp = 2 if x.shape[1] > base_shape[1] else 1
             base_shape = (B, x.shape[1], K, L // tmp)
             print("c_layers x: ", x.shape)
         x = x + outputs.pop()  # add a skip connection to the last output of the down block
@@ -330,7 +330,7 @@ class diff_CSDI(nn.Module):
                     else:
                         x = layer(x)
 
-                    tmp = 1 if x.shape[1] > base_shape[1] else 2
+                    tmp = 2 if x.shape[1] > base_shape[1] else 1
                     base_shape = (B, x.shape[1], K, L // tmp)
                     print("u_layers x: ", x.shape)
                     x = x + outputs.pop()  # skip connection
@@ -340,7 +340,7 @@ class diff_CSDI(nn.Module):
                         x = layer(x, base_shape, cond_info, diffusion_emb)
                     else:
                         x = layer(x)
-                    tmp = 1 if x.shape[1] > base_shape[1] else 2
+                    tmp = 2 if x.shape[1] > base_shape[1] else 1
                     base_shape = (B, x.shape[1], K, L // tmp)
                     print("u_layers x: ", x.shape)
                     if isinstance(layer, UpPool):
