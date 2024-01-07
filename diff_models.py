@@ -208,7 +208,7 @@ class diff_CSDI(nn.Module):
 
             return ResidualBlock(
                 side_dim=config["side_dim"],
-                channels=self.channels,
+                channels=dim,
                 diffusion_embedding_dim=config["diffusion_embedding_dim"],
                 layer=layer,
                 dropout=dropout,
@@ -224,7 +224,7 @@ class diff_CSDI(nn.Module):
             )
             return ResidualBlock(
                 side_dim=config["side_dim"],
-                channels=self.channels,
+                channels=dim,
                 diffusion_embedding_dim=config["diffusion_embedding_dim"],
                 layer=layer,
                 dropout=dropout,
