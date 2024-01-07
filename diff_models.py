@@ -55,25 +55,6 @@ class DownPool(nn.Module):
         x = self.linear(x)
         return x
 
-    def step(self, x, state, **kwargs):
-        """
-        x: (..., H)
-        """
-
-        if x is None: return None, state
-        state.append(x)
-        if len(state) == self.pool:
-            x = rearrange(torch.stack(state, dim=-1), '... h s -> ... (h s)')
-            x = x.unsqueeze(-1)
-            x = self.linear(x)
-            x = x.squeeze(-1)
-            return x, []
-        else:
-            return None, state
-
-    def default_state(self, *args, **kwargs):
-        return []
-
 
 class UpPool(nn.Module):
     def __init__(self, d_input, expand, pool, causal=True):
@@ -97,28 +78,6 @@ class UpPool(nn.Module):
         x = rearrange(x, '... (h s) l -> ... h (l s)', s=self.pool)
 
         return x
-
-    def step(self, x, state, **kwargs):
-        """
-        x: (..., H)
-        """
-        assert len(state) > 0
-        y, state = state[0], state[1:]
-        if len(state) == 0:
-            assert x is not None
-            x = x.unsqueeze(-1)
-            x = self.linear(x)
-            x = x.squeeze(-1)
-            x = rearrange(x, '... (h s) -> ... h s', s=self.pool)
-            state = list(torch.unbind(x, dim=-1))
-        else:
-            assert x is None
-        return y, state
-
-    def default_state(self, *batch_shape, device=None):
-        state = torch.zeros(batch_shape + (self.d_output, self.pool), device=device)  # (batch, h, s)
-        state = list(torch.unbind(state, dim=-1))  # List of (..., H)
-        return state
 
 
 class FFBlock(nn.Module):
@@ -158,13 +117,6 @@ class FFBlock(nn.Module):
 
     def forward(self, x):
         return self.ff(x), None
-
-    def default_state(self, *args, **kwargs):
-        return None
-
-    def step(self, x, state, **kwargs):
-        # expects: (B, D, L)
-        return self.ff(x.unsqueeze(-1)).squeeze(-1), state
 
 
 class DiffusionEmbedding(nn.Module):
@@ -285,10 +237,12 @@ class diff_CSDI(nn.Module):
                 for _ in range(self.n_layers):
                     if i == 0:
                         d_layers.append(s4_block(H, 1))
-                        if ff > 0: d_layers.append(ff_block(H, 1))
+                        if ff > 0:
+                            d_layers.append(ff_block(H, 1))
                     elif i == 1:
                         d_layers.append(s4_block(H, p))
-                        if ff > 0: d_layers.append(ff_block(H, p))
+                        if ff > 0:
+                            d_layers.append(ff_block(H, p))
             # Add sequence downsampling and feature expanding
             d_layers.append(DownPool(H, expand, p))
             H *= expand
@@ -297,7 +251,8 @@ class diff_CSDI(nn.Module):
         c_layers = []
         for _ in range(self.n_layers):
             c_layers.append(s4_block(H, pool[1] * 2))
-            if ff > 0: c_layers.append(ff_block(H, pool[1] * 2))
+            if ff > 0:
+                c_layers.append(ff_block(H, pool[1] * 2))
 
         # Up blocks
         u_layers = []
@@ -309,12 +264,12 @@ class diff_CSDI(nn.Module):
             for _ in range(self.n_layers):
                 if i == 0:
                     block.append(s4_block(H, pool[0]))
-                    if ff > 0: block.append(ff_block(H, pool[0]))
-
+                    if ff > 0:
+                        block.append(ff_block(H, pool[0]))
                 elif i == 1:
                     block.append(s4_block(H, 1))
-                    if ff > 0: block.append(ff_block(H, 1))
-
+                    if ff > 0:
+                        block.append(ff_block(H, 1))
             u_layers.append(nn.ModuleList(block))
 
         self.d_layers = nn.ModuleList(d_layers)
