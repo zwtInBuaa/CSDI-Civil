@@ -80,11 +80,11 @@ class diff_CSDI(nn.Module):
         )
 
     def forward(self, x, cond_info, diffusion_step):
-        cond_x, x = torch.chunk(x, 2, dim=1)
-        cond_x = self.cond_x_input_projection(torch.squeeze(cond_x, dim=1)).unsqueeze(1)  # (B,1,K,L)
-        x = self.x_input_projection(torch.squeeze(x, dim=1)).unsqueeze(1)  # (B,1,K,L)
-
-        x = torch.cat([cond_x, x], dim=1)  # (B,2,K,L)
+        # cond_x, x = torch.chunk(x, 2, dim=1)
+        # cond_x = self.cond_x_input_projection(torch.squeeze(cond_x, dim=1)).unsqueeze(1)  # (B,1,K,L)
+        # x = self.x_input_projection(torch.squeeze(x, dim=1)).unsqueeze(1)  # (B,1,K,L)
+        #
+        # x = torch.cat([cond_x, x], dim=1)  # (B,2,K,L)
 
         B, inputdim, K, L = x.shape
 
@@ -95,9 +95,12 @@ class diff_CSDI(nn.Module):
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
 
+        history_x = torch.tensor([x])
         skip = []
         for layer in self.residual_layers:
+            x = torch.mean(history_x, dim=0)
             x, skip_connection = layer(x, cond_info, diffusion_emb)
+            history_x = torch.cat((history_x, x.unsqueeze(0)), dim=0)
             skip.append(skip_connection)
 
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
