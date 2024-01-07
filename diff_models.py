@@ -325,7 +325,7 @@ class diff_CSDI(nn.Module):
                     else:
                         x = layer(x)
 
-                    base_shape = (B, x.shape[1], base_shape[2], base_shape[3] // (base_shape[1] // x.shape[1]))
+                    base_shape = (B, x.shape[1], base_shape[2], base_shape[3] * (base_shape[1] // x.shape[1]))
                     # print("u_layers x: ", x.shape)
                     x = x + outputs.pop()  # skip connection
             else:
