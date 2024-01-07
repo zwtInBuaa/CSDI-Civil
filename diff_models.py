@@ -298,12 +298,12 @@ class diff_CSDI(nn.Module):
         outputs = [x]
         i = 0
         for layer in self.d_layers:
-            print("base_shape", base_shape)
+            # print("base_shape", base_shape)
             if isinstance(layer, ResidualBlock):
                 x = layer(x, base_shape, cond_info, diffusion_emb)
             else:
                 x = layer(x)
-            base_shape = (B, x.shape[1], K, L // (x.shape[1] // base_shape[1]))
+            base_shape = (B, x.shape[1], base_shape[2], base_shape[3] // (x.shape[1] // base_shape[1]))
 
             outputs.append(x)
             # print("%d-th d_layers x: " % i, x.shape)
@@ -315,7 +315,7 @@ class diff_CSDI(nn.Module):
                 x = layer(x, base_shape, cond_info, diffusion_emb)
             else:
                 x = layer(x)
-            base_shape = (B, x.shape[1], K, L // (x.shape[1] // base_shape[1]))
+            base_shape = (B, x.shape[1], base_shape[2], base_shape[3] // (x.shape[1] // base_shape[1]))
             # print("c_layers x: ", x.shape)
         x = x + outputs.pop()  # add a skip connection to the last output of the down block
 
@@ -328,7 +328,7 @@ class diff_CSDI(nn.Module):
                     else:
                         x = layer(x)
 
-                    base_shape = (B, x.shape[1], K, L // (x.shape[1] // base_shape[1]))
+                    base_shape = (B, x.shape[1], base_shape[2], base_shape[3] // (x.shape[1] // base_shape[1]))
                     # print("u_layers x: ", x.shape)
                     x = x + outputs.pop()  # skip connection
             else:
@@ -337,7 +337,7 @@ class diff_CSDI(nn.Module):
                         x = layer(x, base_shape, cond_info, diffusion_emb)
                     else:
                         x = layer(x)
-                    base_shape = (B, x.shape[1], K, L // (x.shape[1] // base_shape[1]))
+                    base_shape = (B, x.shape[1], base_shape[2], base_shape[3] // (x.shape[1] // base_shape[1]))
                     # print("u_layers x: ", x.shape)
                     if isinstance(layer, UpPool):
                         # Before modeling layer in the block
