@@ -304,6 +304,7 @@ class diff_CSDI(nn.Module):
                 x = layer(x)
             outputs.append(x)
             print("%d-th d_layers x: " % i, x.shape)
+            i = i + 1
 
         # center block
         for layer in self.c_layers:
