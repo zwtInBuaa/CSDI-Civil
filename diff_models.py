@@ -426,7 +426,7 @@ class ResidualBlock(nn.Module):
         x = x.reshape(B, channel, K * L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
-        print("x,", x.shape, "diffusion_emb,", diffusion_emb.shpae)
+        print("x,", x.shape, "diffusion_emb,", diffusion_emb.shape)
         y = x + diffusion_emb
 
         # Pre norm
