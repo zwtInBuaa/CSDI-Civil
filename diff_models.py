@@ -290,7 +290,7 @@ class diff_CSDI(nn.Module):
         base_shape = x.shape
         x = x.reshape(B, self.channels, K * L)
 
-        print("init x: ", x.shape)
+        # print("init x: ", x.shape)
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
 
@@ -298,15 +298,15 @@ class diff_CSDI(nn.Module):
         outputs = [x]
         i = 0
         for layer in self.d_layers:
+            print("base_shape", base_shape)
             if isinstance(layer, ResidualBlock):
                 x = layer(x, base_shape, cond_info, diffusion_emb)
             else:
                 x = layer(x)
-
             base_shape = (B, x.shape[1], K, L // (x.shape[1] // base_shape[1]))
 
             outputs.append(x)
-            print("%d-th d_layers x: " % i, x.shape)
+            # print("%d-th d_layers x: " % i, x.shape)
             i = i + 1
 
         # center block
@@ -316,7 +316,7 @@ class diff_CSDI(nn.Module):
             else:
                 x = layer(x)
             base_shape = (B, x.shape[1], K, L // (x.shape[1] // base_shape[1]))
-            print("c_layers x: ", x.shape)
+            # print("c_layers x: ", x.shape)
         x = x + outputs.pop()  # add a skip connection to the last output of the down block
 
         # Up blocks
@@ -329,7 +329,7 @@ class diff_CSDI(nn.Module):
                         x = layer(x)
 
                     base_shape = (B, x.shape[1], K, L // (x.shape[1] // base_shape[1]))
-                    print("u_layers x: ", x.shape)
+                    # print("u_layers x: ", x.shape)
                     x = x + outputs.pop()  # skip connection
             else:
                 for layer in block:
@@ -338,7 +338,7 @@ class diff_CSDI(nn.Module):
                     else:
                         x = layer(x)
                     base_shape = (B, x.shape[1], K, L // (x.shape[1] // base_shape[1]))
-                    print("u_layers x: ", x.shape)
+                    # print("u_layers x: ", x.shape)
                     if isinstance(layer, UpPool):
                         # Before modeling layer in the block
                         x = x + outputs.pop()
@@ -422,7 +422,7 @@ class ResidualBlock(nn.Module):
         x = x.reshape(B, channel, K * L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
-        print("x,", x.shape, "diffusion_emb,", diffusion_emb.shape)
+        # print("x,", x.shape, "diffusion_emb,", diffusion_emb.shape)
         y = x + diffusion_emb
 
         # Pre norm
