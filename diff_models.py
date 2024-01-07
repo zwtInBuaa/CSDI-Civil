@@ -329,6 +329,7 @@ class diff_CSDI(nn.Module):
         x = self.input_projection(x)
         x = F.relu(x)
         x = x.reshape(B, self.channels, K, L)
+        base_shape = x.shape
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
 
@@ -336,7 +337,7 @@ class diff_CSDI(nn.Module):
         outputs = [x]
         for layer in self.d_layers:
             if isinstance(layer, ResidualBlock):
-                x = layer(x, cond_info, diffusion_emb)
+                x = layer(x, base_shape, cond_info, diffusion_emb)
             else:
                 x = layer(x)
             outputs.append(x)
@@ -344,7 +345,7 @@ class diff_CSDI(nn.Module):
         # center block
         for layer in self.c_layers:
             if isinstance(layer, ResidualBlock):
-                x = layer(x, cond_info, diffusion_emb)
+                x = layer(x, base_shape, cond_info, diffusion_emb)
             else:
                 x = layer(x)
         x = x + outputs.pop()  # add a skip connection to the last output of the down block
@@ -354,14 +355,14 @@ class diff_CSDI(nn.Module):
             if self.unet:
                 for layer in block:
                     if isinstance(layer, ResidualBlock):
-                        x = layer(x, cond_info, diffusion_emb)
+                        x = layer(x, base_shape, cond_info, diffusion_emb)
                     else:
                         x = layer(x)
                     x = x + outputs.pop()  # skip connection
             else:
                 for layer in block:
                     if isinstance(layer, ResidualBlock):
-                        x = layer(x, cond_info, diffusion_emb)
+                        x = layer(x, base_shape, cond_info, diffusion_emb)
                     else:
                         x = layer(x)
                     if isinstance(layer, UpPool):
@@ -440,10 +441,11 @@ class ResidualBlock(nn.Module):
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
-    def forward(self, x, cond_info, diffusion_emb):
+    def forward(self, x, base_shape, cond_info, diffusion_emb):
+        x = x.reshape(base_shape)
         B, channel, K, L = x.shape
         base_shape = x.shape
-        x = x.reshape(B, channel, K * L)
+        # x = x.reshape(B, channel, K * L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
