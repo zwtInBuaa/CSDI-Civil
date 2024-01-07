@@ -13,6 +13,7 @@ import json
 import yaml
 import os
 from torch.utils.data import DataLoader, Dataset
+import wandb
 import logging
 from functools import partial
 from scipy import special as ss
@@ -22,6 +23,11 @@ import opt_einsum as oe
 
 contract = oe.contract
 contract_expression = oe.contract_expression
+
+''' Standalone CSDI + S4 imputer for random missing, non-random missing and black-out missing.
+The notebook contains CSDI and S4 functions and utilities. However the imputer is located in the last Class of
+the notebook, please see more documentation of use there. Additional at this file can be added for CUDA multiplication 
+the cauchy kernel.'''
 
 
 def get_logger(name=__name__, level=logging.INFO) -> logging.Logger:
@@ -47,7 +53,7 @@ try:  # Try CUDA extension
 
     has_cauchy_extension = True
 except:
-    log.warning(
+    log.warn(
         "CUDA extension for cauchy multiplication not found. Install by going to extensions/cauchy/ and running `python setup.py install`. This should speed up end-to-end training by 10-50%"
     )
     has_cauchy_extension = False
@@ -1005,6 +1011,12 @@ class HippoSSKernel(nn.Module):
         return self.kernel.default_state(*args, **kwargs)
 
 
+def get_torch_trans(heads=8, layers=1, channels=64):
+    encoder_layer = nn.TransformerEncoderLayer(
+        d_model=channels, nhead=heads, dim_feedforward=64, activation="gelu")
+    return nn.TransformerEncoder(encoder_layer, num_layers=layers)
+
+
 class S4(nn.Module):
 
     def __init__(
@@ -1083,6 +1095,8 @@ class S4(nn.Module):
             weight_norm=weight_norm,
         )
 
+        # self.time_transformer = get_torch_trans(heads=8, layers=1, channels=self.h)
+
     def forward(self, u, **kwargs):  # absorbs return_output and transformer src mask
         """
         u: (B H L) if self.transposed else (B L H)
@@ -1122,6 +1136,9 @@ class S4(nn.Module):
 
         y = self.output_linear(y)
 
+        # ysize = b, k, l, requieres l, b, k
+        # y = self.time_transformer(y.permute(2,0,1)).permute(1,2,0)
+
         return y, None
 
     def step(self, u, state):
@@ -1160,24 +1177,22 @@ class S4(nn.Module):
 
 
 class S4Layer(nn.Module):
-    '''S4 Layer that can be used as a drop-in replacement for a TransformerEncoder'''
-
+    # S4 Layer that can be used as a drop-in replacement for a TransformerEncoder
     def __init__(self, features, lmax, N=64, dropout=0.0, bidirectional=True, layer_norm=True):
         super().__init__()
         self.s4_layer = S4(d_model=features,
                            d_state=N,
-                           l_max=251,
-                           bidirectional=True)
+                           l_max=lmax,
+                           bidirectional=bidirectional)
 
         self.norm_layer = nn.LayerNorm(features) if layer_norm else nn.Identity()
         self.dropout = nn.Dropout2d(dropout) if dropout > 0 else nn.Identity()
 
     def forward(self, x):
         # x has shape seq, batch, feature
-        xin = x.permute((1, 2, 0))  # batch, feature, seq (as expected from S4 with transposed=True)
-
-        xout, _ = self.s4_layer(xin)  # batch, feature, seq
+        x = x.permute((1, 2, 0))  # batch, feature, seq (as expected from S4 with transposed=True)
+        xout, _ = self.s4_layer(x)  # batch, feature, seq
         xout = self.dropout(xout)
-        xout = xout + xin  # skip connection   # batch, feature, seq
+        xout = xout + x  # skip connection   # batch, feature, seq
         xout = xout.permute((2, 0, 1))  # seq, batch, feature
         return self.norm_layer(xout)
