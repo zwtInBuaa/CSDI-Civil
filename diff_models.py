@@ -129,9 +129,9 @@ class ResidualBlock(nn.Module):
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_layer = S4Layer(features=channels, lmax=100)
 
-        self.attn_time = torch.nn.Transformer(d_model=channels, nhead=5, num_encoder_layers=1, num_decoder_layers=1,
+        self.attn_time = torch.nn.Transformer(d_model=channels, nhead=4, num_encoder_layers=1, num_decoder_layers=1,
                                               dim_feedforward=64, dropout=0.1, activation='gelu')
-        self.attn_feature = torch.nn.Transformer(d_model=channels, nhead=5, num_encoder_layers=1, num_decoder_layers=1,
+        self.attn_feature = torch.nn.Transformer(d_model=channels, nhead=4, num_encoder_layers=1, num_decoder_layers=1,
                                                  dim_feedforward=64, dropout=0.1, activation='gelu')
 
     def forward_time(self, y, cond_obs, base_shape):
