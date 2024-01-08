@@ -143,19 +143,18 @@ class ResidualBlock(nn.Module):
 
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
-        y_time = self.forward_time(y, base_shape)
-        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        y = torch.sigmoid(y_time) * torch.tanh(y_feature)
+        # y_time = self.forward_time(y, base_shape)
+        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
         # y = self.mid_projection(y)
+        y = self.mid_projection(y)
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
-        cond_info = self.cond_projection1(cond_info)  # (B,2*channel,K*L)
+        cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         # cond_info = self.s4(cond_info)
         y = y + cond_info
-
-        y = self.mid_projection(y)
 
         y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
