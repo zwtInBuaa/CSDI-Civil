@@ -120,7 +120,7 @@ class ResidualBlock(nn.Module):
         if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
@@ -141,8 +141,9 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        # y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
+        y = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
         y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
