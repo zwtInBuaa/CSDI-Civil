@@ -177,6 +177,8 @@ class ResidualBlock(nn.Module):
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
         # y = self.mid_projection(y)
 
+        print(y.shape)
+
         y = self.s4_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         _, cond_dim, _, _ = cond_info.shape
