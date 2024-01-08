@@ -60,8 +60,8 @@ class diff_CSDI(nn.Module):
         )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
-        self.x_input_projection = Conv1d_with_init(1, self.channels, 1)
-        self.cond_x_input_projection = Conv1d_with_init(1, self.channels, 1)
+        # self.x_input_projection = Conv1d_with_init(1, self.channels, 1)
+        # self.cond_x_input_projection = Conv1d_with_init(1, self.channels, 1)
 
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
         self.output_projection2 = Conv1d_with_init(self.channels, 1, 1)
@@ -90,8 +90,8 @@ class diff_CSDI(nn.Module):
 
         B, inputdim, K, L = x.shape
 
-        cond_obs = self.cond_x_input_projection(cond_obs.reshape(B, 1, K * L)).reshape(B, self.channels, K, L)
-        noisy_target = self.cond_x_input_projection(noisy_target.reshape(B, 1, K * L)).reshape(B, self.channels, K, L)
+        # cond_obs = self.cond_x_input_projection(cond_obs.reshape(B, 1, K * L)).reshape(B, self.channels, K, L)
+        # noisy_target = self.cond_x_input_projection(noisy_target.reshape(B, 1, K * L)).reshape(B, self.channels, K, L)
 
         x = x.reshape(B, inputdim, K * L)
         x = self.input_projection(x)
@@ -124,54 +124,46 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
+        self.cond_obs_projection = Conv1d_with_init(1, channels, 1)
+
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_layer = S4Layer(features=channels, lmax=100)
-
-        self.attn_time = torch.nn.Transformer(d_model=channels, nhead=4, num_encoder_layers=1, num_decoder_layers=1,
-                                              dim_feedforward=64, dropout=0.1, activation='gelu')
-        self.attn_feature = torch.nn.Transformer(d_model=channels, nhead=4, num_encoder_layers=1, num_decoder_layers=1,
-                                                 dim_feedforward=64, dropout=0.1, activation='gelu')
 
     def forward_time(self, y, noisy_target, base_shape):
         B, channel, K, L = base_shape
         if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        noisy_target = noisy_target.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        # y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = self.attn_time(y.permute(2, 0, 1), noisy_target.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
-    def forward_feature(self, y, noisy_target, base_shape):
+    def forward_feature(self, y, base_shape):
         B, channel, K, L = base_shape
         if K == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        noisy_target = noisy_target.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        # y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = self.attn_time(y.permute(2, 0, 1), noisy_target.permute(2, 0, 1)).permute(1, 2, 0)
-        # y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
     def forward(self, x, cond_info, diffusion_emb, origin_data):
 
-        _, noisy_target = origin_data
-
         B, channel, K, L = x.shape
         base_shape = x.shape
         x = x.reshape(B, channel, K * L)
-        noisy_target = noisy_target.reshape(B, channel, K * L)
+        cond_obs, noisy_target = origin_data
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
-        noisy_target = noisy_target + diffusion_emb
 
-        y_time = self.forward_time(y, noisy_target, base_shape)
-        y_feature = self.forward_feature(y, noisy_target, base_shape)  # (B,channel,K*L)
+        cond_obs_emb = self.cond_obs_projection(cond_obs.reshape(B, 1, K * L)).permute(B, channel, K, L)
+        y = y + 0.5 * cond_obs_emb
+
+        y_time = self.forward_time(y, base_shape)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
         # y = self.mid_projection(y)
