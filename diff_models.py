@@ -24,16 +24,29 @@ class DiffusionEmbedding(nn.Module):
         super().__init__()
         if projection_dim is None:
             projection_dim = embedding_dim
-        self.register_buffer(
-            "embedding",
-            self._build_embedding(num_steps, embedding_dim / 2),
-            persistent=False,
-        )
+        # self.register_buffer(
+        #     "embedding",
+        #     self._build_embedding(num_steps, embedding_dim / 2),
+        #     persistent=False,
+        # )
+        self.num_steps = num_steps
+        self.basis_freq = nn.Parameter((1 / 10 ** torch.linspace(0, 9, embedding_dim)).float())
+        self.phase = nn.Parameter(torch.zeros(embedding_dim).float())
+
         self.projection1 = nn.Linear(embedding_dim, projection_dim)
         self.projection2 = nn.Linear(projection_dim, projection_dim)
 
     def forward(self, diffusion_step):
-        x = self.embedding[diffusion_step]
+        diffusion_step = diffusion_step.unsqueeze(1)  # (T,1)
+        map_ts = diffusion_step * self.basis_freq.view(1, -1)
+        map_ts += self.phase.view(1, -1)
+        map_ts[:, 0::2] = torch.cos(map_ts[:, 0::2].clone())
+        map_ts[:, 1::2] = torch.sin(map_ts[:, 1::2].clone())
+
+        x = map_ts
+
+        # x = self.embedding[diffusion_step]  # [B,128]
+
         x = self.projection1(x)
         x = F.silu(x)
         x = self.projection2(x)
@@ -46,6 +59,29 @@ class DiffusionEmbedding(nn.Module):
         table = steps * frequencies  # (T,dim)
         table = torch.cat([torch.sin(table), torch.cos(table)], dim=1)  # (T,dim*2)
         return table
+
+
+class TimeEncode(nn.Module):
+    def __init__(self, expand_dim, factor=5):
+        super(TimeEncode, self).__init__()
+
+        self.time_dim = expand_dim
+        self.factor = factor
+        self.basis_freq = nn.Parameter((1 / 10 ** torch.linspace(0, 9, self.time_dim)).float())
+        self.phase = nn.Parameter(torch.zeros(self.time_dim).float())
+
+    def forward(self, ts):
+        # ts: [N,L]
+        batch_size = ts.size(0)
+
+        ts = ts.view(batch_size, 1)  # [N,L, 1]
+        map_ts = ts * self.basis_freq.view(1, 1, -1)  # [N, L, time_dim]
+        map_ts += self.phase.view(1, 1, -1)
+
+        map_ts[:, :, 0::2] = torch.cos(map_ts[:, :, 0::2].clone())
+        map_ts[:, :, 1::2] = torch.sin(map_ts[:, :, 1::2].clone())
+
+        return map_ts
 
 
 class diff_CSDI(nn.Module):
