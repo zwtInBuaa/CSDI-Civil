@@ -45,8 +45,8 @@ class DiffusionEmbedding(nn.Module):
 
         # x = self.embedding[diffusion_step]  # [B,128]
 
-        x = self.projection1(x)
-        x = F.silu(x)
+        # x = self.projection1(x)
+        # x = F.silu(x)
         # x = self.projection2(x)
         # x = F.silu(x)
         return x
