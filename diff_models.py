@@ -30,7 +30,7 @@ class DiffusionEmbedding(nn.Module):
         #     persistent=False,
         # )
         self.num_steps = num_steps
-        self.basis_freq = nn.Parameter((1 / 10 ** torch.linspace(0, 9, embedding_dim)).float())
+        self.basis_freq = nn.Parameter((10.0 ** (torch.arange(embedding_dim) / (embedding_dim - 1) * 4.0)).float())
         self.phase = nn.Parameter(torch.zeros(embedding_dim).float())
 
         self.projection1 = nn.Linear(embedding_dim, projection_dim)
