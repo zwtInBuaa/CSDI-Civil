@@ -103,6 +103,7 @@ class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
+        print(diffusion_embedding_dim)
 
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
