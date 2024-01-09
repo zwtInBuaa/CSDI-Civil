@@ -161,10 +161,6 @@ class CSDI_base(nn.Module):
 
             current_sample = torch.randn_like(observed_data)
 
-            if not self.is_unconditional:
-                cond_obs = (cond_mask * observed_data).unsqueeze(1)
-                side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
-                
             for t in range(self.num_steps - 1, -1, -1):
                 if self.is_unconditional == True:
                     diff_input = cond_mask * noisy_cond_history[t] + (1.0 - cond_mask) * current_sample
@@ -229,6 +225,9 @@ class CSDI_base(nn.Module):
             target_mask = observed_mask - cond_mask
 
             side_info = self.get_side_info(observed_tp, cond_mask)
+            if not self.is_unconditional:
+                cond_obs = (cond_mask * observed_data).unsqueeze(1)
+                side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
 
             samples = self.impute(observed_data, cond_mask, side_info, n_samples)
 
