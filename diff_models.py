@@ -89,7 +89,7 @@ class diff_CSDI(nn.Module):
 
         self.diffusion_embedding = DiffusionEmbedding(
             num_steps=config["num_steps"],
-            embedding_dim=config["diffusion_embedding_dim"],
+            embedding_dim=config["channels"],
         )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
@@ -138,15 +138,15 @@ class diff_CSDI(nn.Module):
 class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
-        self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
+        # self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.time_layer = S4Layer(features=channels, lmax=100)
-        
-        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.time_layer = S4Layer(features=channels, lmax=100)
+
+        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
         self.s4_end_layer = S4Layer(features=channels * 2, lmax=100)
@@ -178,8 +178,8 @@ class ResidualBlock(nn.Module):
         base_shape = x.shape
         x = x.reshape(B, channel, K * L)
 
-        diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
-        y = x + diffusion_emb
+        # diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
+        y = x + diffusion_emb.unsqueeze(-1)
 
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
