@@ -133,7 +133,7 @@ class ResidualBlock(nn.Module):
         return y
 
     def forward_s4(self, y, base_shape):
-        y = self.s4_end_layer(y)
+        y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         return y
 
     def forward(self, x, cond_info, diffusion_emb):
