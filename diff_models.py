@@ -76,6 +76,7 @@ class diff_CSDI(nn.Module):
         )
 
     def forward(self, x, cond_info, diffusion_step):
+        print("diffusion_step", diffusion_step, diffusion_step.shape)
         B, inputdim, K, L = x.shape
 
         x = x.reshape(B, inputdim, K * L)
