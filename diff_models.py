@@ -8,7 +8,7 @@ from layers.S4Layer import S4Layer
 
 def get_torch_trans(heads=8, layers=1, channels=64):
     encoder_layer = nn.TransformerEncoderLayer(
-        d_model=channels, nhead=heads, dim_feedforward=64, activation="gelu", dropout=0.2
+        d_model=channels, nhead=heads, dim_feedforward=64, activation="gelu"
     )
     return nn.TransformerEncoder(encoder_layer, num_layers=layers)
 
@@ -111,8 +111,8 @@ class ResidualBlock(nn.Module):
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.s4_init_layer = S4Layer(features=channels, lmax=100, dropout=0.3)
-        self.s4_end_layer = S4Layer(features=channels * 2, lmax=100, dropout=0.3)
+        self.s4_init_layer = S4Layer(features=channels, lmax=100)
+        self.s4_end_layer = S4Layer(features=channels * 2, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
