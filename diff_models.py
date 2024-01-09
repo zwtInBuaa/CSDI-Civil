@@ -141,6 +141,7 @@ class ResidualBlock(nn.Module):
         y = x + diffusion_emb
 
         # y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        
 
         y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)sw
