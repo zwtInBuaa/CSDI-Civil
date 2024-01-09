@@ -30,8 +30,9 @@ class DiffusionEmbedding(nn.Module):
         #     persistent=False,
         # )
         self.num_steps = num_steps
-        self.basis_freq = nn.Parameter((10.0 ** (torch.arange(embedding_dim) / (embedding_dim - 1) * 4.0)).float())
-        self.phase = nn.Parameter(torch.zeros(embedding_dim).float())
+        self.basis_freq = nn.Parameter(
+            (10.0 ** (torch.arange(embedding_dim / 2) / (embedding_dim / 2 - 1) * 4.0)).float())
+        self.phase = nn.Parameter(torch.zeros(embedding_dim / 2).float())
 
         self.projection1 = nn.Linear(embedding_dim, projection_dim)
         self.projection2 = nn.Linear(projection_dim, projection_dim)
@@ -40,10 +41,7 @@ class DiffusionEmbedding(nn.Module):
         diffusion_step = diffusion_step.unsqueeze(1)  # (T,1)
         map_ts = diffusion_step * self.basis_freq.view(1, -1)
         map_ts += self.phase.view(1, -1)
-        map_ts[:, 0::2] = torch.cos(map_ts[:, 0::2].clone())
-        map_ts[:, 1::2] = torch.sin(map_ts[:, 1::2].clone())
-
-        x = map_ts
+        x = torch.cat([torch.sin(map_ts), torch.cos(map_ts)], dim=1)  # (T,dim*2)
 
         # x = self.embedding[diffusion_step]  # [B,128]
 
