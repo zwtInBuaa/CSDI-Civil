@@ -8,7 +8,7 @@ from layers.S4Layer import S4Layer
 
 def get_torch_trans(heads=8, layers=1, channels=64):
     encoder_layer = nn.TransformerEncoderLayer(
-        d_model=channels, nhead=heads, dim_feedforward=64, activation="gelu"
+        d_model=channels, nhead=heads, dim_feedforward=64, activation="gelu", dropout=0.2
     )
     return nn.TransformerEncoder(encoder_layer, num_layers=layers)
 
