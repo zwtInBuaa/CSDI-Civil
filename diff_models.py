@@ -114,20 +114,12 @@ class ResidualBlock(nn.Module):
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
         self.s4_end_layer = S4Layer(features=channels * 2, lmax=100)
 
-        self.res_conv = nn.Conv1d(channels, channels, kernel_size=1)
-        self.res_conv = nn.utils.weight_norm(self.res_conv)
-        nn.init.kaiming_normal_(self.res_conv.weight)
-
-        self.skip_conv = nn.Conv1d(channels, channels, kernel_size=1)
-        self.skip_conv = nn.utils.weight_norm(self.skip_conv)
-        nn.init.kaiming_normal_(self.skip_conv.weight)
-
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
         if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
@@ -138,6 +130,10 @@ class ResidualBlock(nn.Module):
         y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
         y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
+        return y
+
+    def forward_s4(self, y, base_shape):
+        y = self.s4_end_layer(y)
         return y
 
     def forward(self, x, cond_info, diffusion_emb):
@@ -151,7 +147,7 @@ class ResidualBlock(nn.Module):
         # y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         y_time = self.forward_time(y, base_shape)
-        # y_time = self.forward_time(y, base_shape)sw
+        # y_time = self.forward_time(y, base_shape)
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
@@ -163,16 +159,13 @@ class ResidualBlock(nn.Module):
         # cond_info = self.s4(cond_info)
         y = y + cond_info
 
-        y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.forward_s4(y, base_shape)
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
-        # y = self.output_projection(y)
+        y = self.output_projection(y)
 
-        # residual, skip = torch.chunk(y, 2, dim=1)
-
-        residual = self.res_conv(y)
-        skip = self.skip_conv(y)
+        residual, skip = torch.chunk(y, 2, dim=1)
 
         x = x.reshape(base_shape)
         residual = residual.reshape(base_shape)
