@@ -161,6 +161,10 @@ class CSDI_base(nn.Module):
 
             current_sample = torch.randn_like(observed_data)
 
+            if not self.is_unconditional:
+                cond_obs = (cond_mask * observed_data).unsqueeze(1)
+                side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
+                
             for t in range(self.num_steps - 1, -1, -1):
                 if self.is_unconditional == True:
                     diff_input = cond_mask * noisy_cond_history[t] + (1.0 - cond_mask) * current_sample
@@ -169,9 +173,7 @@ class CSDI_base(nn.Module):
                     cond_obs = (cond_mask * observed_data).unsqueeze(1)
                     noisy_target = ((1 - cond_mask) * current_sample).unsqueeze(1)
                     diff_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
-                    print("side_info", side_info.shape)
-                    print("cond_obs", cond_obs.shape)
-                    side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
+
                 predicted = self.diffmodel(diff_input, side_info, torch.tensor([t]).to(self.device))
 
                 coeff1 = 1 / self.alpha_hat[t] ** 0.5
