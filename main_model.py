@@ -17,7 +17,7 @@ class CSDI_base(nn.Module):
 
         self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim
         if self.is_unconditional == False:
-            self.emb_total_dim += 2  # for conditional mask
+            self.emb_total_dim += 1  # for conditional mask
         self.embed_layer = nn.Embedding(
             num_embeddings=self.target_dim, embedding_dim=self.emb_feature_dim
         )
@@ -124,7 +124,7 @@ class CSDI_base(nn.Module):
 
         total_input = self.set_input_to_diffmodel(noisy_data, observed_data, cond_mask)
         cond_obs = (cond_mask * observed_data).unsqueeze(1)
-        side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
+        # side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
 
         predicted = self.diffmodel(total_input, side_info, t)  # (B,K,L)
 
@@ -225,9 +225,9 @@ class CSDI_base(nn.Module):
             target_mask = observed_mask - cond_mask
 
             side_info = self.get_side_info(observed_tp, cond_mask)
-            if not self.is_unconditional:
-                cond_obs = (cond_mask * observed_data).unsqueeze(1)
-                side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
+            # if not self.is_unconditional:
+            #     cond_obs = (cond_mask * observed_data).unsqueeze(1)
+            #     side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
 
             samples = self.impute(observed_data, cond_mask, side_info, n_samples)
 
