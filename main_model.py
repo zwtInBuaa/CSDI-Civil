@@ -169,6 +169,8 @@ class CSDI_base(nn.Module):
                     cond_obs = (cond_mask * observed_data).unsqueeze(1)
                     noisy_target = ((1 - cond_mask) * current_sample).unsqueeze(1)
                     diff_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
+                    print("side_info", side_info.shape)
+                    print("cond_obs", cond_obs.shape)
                     side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
                 predicted = self.diffmodel(diff_input, side_info, torch.tensor([t]).to(self.device))
 
