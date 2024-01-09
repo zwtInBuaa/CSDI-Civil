@@ -148,7 +148,6 @@ class ResidualBlock(nn.Module):
         y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
-        # y = self.mid_projection(y)
         y = self.mid_projection(y)
 
         _, cond_dim, _, _ = cond_info.shape
