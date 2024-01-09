@@ -8,3 +8,5 @@ wget
 reformer-pytorch==1.4.4
 einops==0.4.0
 opt_einsum
+scipy
+pytorch_lightning
