@@ -114,6 +114,14 @@ class ResidualBlock(nn.Module):
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
         self.s4_end_layer = S4Layer(features=channels * 2, lmax=100)
 
+        self.res_conv = nn.Conv1d(channels, channels, kernel_size=1)
+        self.res_conv = nn.utils.weight_norm(self.res_conv)
+        nn.init.kaiming_normal_(self.res_conv.weight)
+
+        self.skip_conv = nn.Conv1d(channels, channels, kernel_size=1)
+        self.skip_conv = nn.utils.weight_norm(self.skip_conv)
+        nn.init.kaiming_normal_(self.skip_conv.weight)
+
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
         if L == 1:
@@ -141,7 +149,6 @@ class ResidualBlock(nn.Module):
         y = x + diffusion_emb
 
         # y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        
 
         y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)sw
@@ -160,9 +167,13 @@ class ResidualBlock(nn.Module):
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
-        y = self.output_projection(y)
+        # y = self.output_projection(y)
 
-        residual, skip = torch.chunk(y, 2, dim=1)
+        # residual, skip = torch.chunk(y, 2, dim=1)
+
+        residual = self.res_conv(y)
+        skip = self.skip_conv(y)
+
         x = x.reshape(base_shape)
         residual = residual.reshape(base_shape)
         skip = skip.reshape(base_shape)
