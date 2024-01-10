@@ -4,10 +4,11 @@ import torch.nn as nn
 from diff_models import diff_CSDI
 
 
-def delt(masks):
+def delt(masks, device):
     B, L, K = masks.shape
     # [T, D] = masks.shape
     deltas = [[] for _ in range(B)]
+    deltas = torch.tensor(deltas).to(device)
 
     for b in range(B):
         for l in range(L):
@@ -111,7 +112,7 @@ class CSDI_base(nn.Module):
         )  # (K,emb)
         feature_embed = feature_embed.unsqueeze(0).unsqueeze(0).expand(B, L, -1, -1)
 
-        delta = delt(cond_mask)
+        delta = delt(cond_mask, self.device)
         print("delta", delta, delta.shape)
 
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
