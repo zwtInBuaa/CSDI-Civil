@@ -6,6 +6,7 @@ from diff_models import diff_CSDI
 
 def delt(masks, device):
     B, K, L = masks.shape  # [batch, length, feature]
+    masks = masks.permute(0, 2, 1)
     deltas = torch.zeros(B, L, K, dtype=torch.float).to(device)
 
     for b in range(B):
