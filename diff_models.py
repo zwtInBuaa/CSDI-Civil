@@ -33,6 +33,7 @@ class DiffusionEmbedding(nn.Module):
         self.basis_freq = nn.Parameter(
             (10.0 ** (torch.arange(embedding_dim // 2) / (embedding_dim // 2 - 1) * 4.0)).float())
         self.phase = nn.Parameter(torch.zeros(embedding_dim // 2).float())
+        self.embedding_dim = embedding_dim
 
         self.projection1 = nn.Linear(embedding_dim, projection_dim)
         self.projection2 = nn.Linear(projection_dim, projection_dim)
@@ -42,13 +43,14 @@ class DiffusionEmbedding(nn.Module):
         map_ts = diffusion_step * self.basis_freq.view(1, -1)
         map_ts += self.phase.view(1, -1)
         x = torch.cat([torch.sin(map_ts), torch.cos(map_ts)], dim=1)  # (T,dim*2)
+        x = x / math.sqrt(self.embedding_dim // 2)
 
         # x = self.embedding[diffusion_step]  # [B,128]
 
-        # x = self.projection1(x)
-        # x = F.silu(x)
-        # x = self.projection2(x)
-        # x = F.silu(x)
+        x = self.projection1(x)
+        x = F.silu(x)
+        x = self.projection2(x)
+        x = F.silu(x)
         return x
 
     def _build_embedding(self, num_steps, dim=64):
@@ -89,7 +91,7 @@ class diff_CSDI(nn.Module):
 
         self.diffusion_embedding = DiffusionEmbedding(
             num_steps=config["num_steps"],
-            embedding_dim=config["channels"],
+            embedding_dim=config["embedding_dim"],
         )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
@@ -138,7 +140,7 @@ class diff_CSDI(nn.Module):
 class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
-        # self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
+        self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
@@ -178,7 +180,7 @@ class ResidualBlock(nn.Module):
         base_shape = x.shape
         x = x.reshape(B, channel, K * L)
 
-        # diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
+        diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb.unsqueeze(-1)
 
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
