@@ -76,7 +76,7 @@ class diff_CSDI(nn.Module):
         )
 
     def forward(self, x, cond_info, diffusion_step):
-        print("diffusion_step", diffusion_step, diffusion_step.shape)
+        # print("diffusion_step", diffusion_step, diffusion_step.shape)
         B, inputdim, K, L = x.shape
 
         x = x.reshape(B, inputdim, K * L)
@@ -85,7 +85,7 @@ class diff_CSDI(nn.Module):
         x = x.reshape(B, self.channels, K, L)
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
-        print("diffusion_emb", diffusion_emb, diffusion_step.shape)
+        # print("diffusion_emb", diffusion_emb, diffusion_step.shape)
 
         skip = []
         for layer in self.residual_layers:
