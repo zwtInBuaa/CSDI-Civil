@@ -15,12 +15,9 @@ def delt(masks, device):
                 deltas[b] = torch.zeros(K, dtype=torch.float).to(device)
 
             else:
-                print(masks[b][l])
-                print(deltas[b][-1])
-                plus = torch.ones(K, dtype=torch.float).to(device) + (1 - masks[b][l]) * deltas[b][l - 1]
+                deltas[b][l] = torch.ones(K, dtype=torch.float).to(device) + (1 - masks[b][l]) * deltas[b][l - 1]
 
-                deltas[b] = torch.cat((deltas[b], plus))
-
+    print(deltas, deltas.shape)
     return deltas
 
 
