@@ -140,7 +140,7 @@ class CSDI_base(nn.Module):
         # print("delta", delta[0][0], sum(delta[0][0]))
         # delta = torch.softmax(delta, dim=-1).unsqueeze(1)
         # print("delta_softmax", delta[0][0], sum(delta[0][0]))
-        delta = self.target_dim(delta)
+        delta = self.temporalDecay(delta)
         print(delta.shape)
 
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
