@@ -73,6 +73,7 @@ class CSDI_base(nn.Module):
         pe[:, :, 0::2] = torch.sin(position * div_term)
         pe[:, :, 1::2] = torch.cos(position * div_term)
         return pe
+    
 
     def delta_embedding(self, delta, d_model=128):
         # delta[B,K,L]
