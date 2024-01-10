@@ -110,9 +110,9 @@ class CSDI_base(nn.Module):
         feature_embed = feature_embed.unsqueeze(0).unsqueeze(0).expand(B, L, -1, -1)
 
         delta = delt(cond_mask, self.device)
-        print("delta", delta[0][0], sum(delta[0][0]))
+        # print("delta", delta[0][0], sum(delta[0][0]))
         delta = torch.softmax(delta, dim=-1).unsqueeze(1)
-        print("delta_softmax", delta[0][0], sum(delta[0][0]))
+        # print("delta_softmax", delta[0][0], sum(delta[0][0]))
 
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
         side_info = side_info.permute(0, 3, 2, 1)  # (B,*,K,L)
