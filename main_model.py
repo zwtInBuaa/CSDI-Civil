@@ -73,7 +73,7 @@ class CSDI_base(nn.Module):
         pe[:, :, 0::2] = torch.sin(position * div_term)
         pe[:, :, 1::2] = torch.cos(position * div_term)
         return pe
-    
+
 
     def delta_embedding(self, delta, d_model=128):
         # delta[B,K,L]
@@ -85,9 +85,8 @@ class CSDI_base(nn.Module):
         )
         pe[:, :, :, 0::2] = torch.sin(delta1 * div_term)
         pe[:, :, :, 1::2] = torch.cos(delta1 * div_term)
-        print((delta1 * div_term).shape)
 
-        return delta1.permute(0, 3, 1, 2)
+        return pe.permute(0, 3, 1, 2)
 
     def get_randmask(self, observed_mask):
         rand_for_mask = torch.rand_like(observed_mask) * observed_mask
