@@ -108,8 +108,8 @@ class CSDI_base(nn.Module):
         feature_embed = feature_embed.unsqueeze(0).unsqueeze(0).expand(B, L, -1, -1)
 
         delta = delt(cond_mask, self.device)
-        delta_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
-        time_embed = time_embed.unsqueeze(2).expand(-1, -1, K, -1)
+        # delta_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
+        # time_embed = time_embed.unsqueeze(2).expand(-1, -1, K, -1)
         print("delta", delta, delta.shape)
 
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
