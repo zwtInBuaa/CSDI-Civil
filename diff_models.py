@@ -24,28 +24,28 @@ class DiffusionEmbedding(nn.Module):
         super().__init__()
         if projection_dim is None:
             projection_dim = embedding_dim
-        # self.register_buffer(
-        #     "embedding",
-        #     self._build_embedding(num_steps, embedding_dim / 2),
-        #     persistent=False,
-        # )
-        self.num_steps = num_steps
-        self.basis_freq = nn.Parameter(
-            (10.0 ** (torch.arange(embedding_dim // 2) / (embedding_dim // 2 - 1) * 4.0)).float())
-        self.phase = nn.Parameter(torch.zeros(embedding_dim // 2).float())
-        self.embedding_dim = embedding_dim
+        self.register_buffer(
+            "embedding",
+            self._build_embedding(num_steps, embedding_dim / 2),
+            persistent=False,
+        )
+        # self.num_steps = num_steps
+        # self.basis_freq = nn.Parameter(
+        #     (10.0 ** (torch.arange(embedding_dim // 2) / (embedding_dim // 2 - 1) * 4.0)).float())
+        # self.phase = nn.Parameter(torch.zeros(embedding_dim // 2).float())
+        # self.embedding_dim = embedding_dim
 
         self.projection1 = nn.Linear(embedding_dim, projection_dim)
         self.projection2 = nn.Linear(projection_dim, projection_dim)
 
     def forward(self, diffusion_step):
-        diffusion_step = diffusion_step.unsqueeze(1)  # (T,1)
-        map_ts = diffusion_step * self.basis_freq.view(1, -1)
-        map_ts += self.phase.view(1, -1)
-        x = torch.cat([torch.sin(map_ts), torch.cos(map_ts)], dim=1)  # (T,dim*2)
-        x = x / math.sqrt(self.embedding_dim // 2)
+        # diffusion_step = diffusion_step.unsqueeze(1)  # (T,1)
+        # map_ts = diffusion_step * self.basis_freq.view(1, -1)
+        # map_ts += self.phase.view(1, -1)
+        # x = torch.cat([torch.sin(map_ts), torch.cos(map_ts)], dim=1)  # (T,dim*2)
+        # x = x / math.sqrt(self.embedding_dim // 2)
 
-        # x = self.embedding[diffusion_step]  # [B,128]
+        x = self.embedding[diffusion_step]  # [B,128]
 
         x = self.projection1(x)
         x = F.silu(x)
