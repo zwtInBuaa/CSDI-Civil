@@ -181,7 +181,7 @@ class ResidualBlock(nn.Module):
         x = x.reshape(B, channel, K * L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
-        y = x + diffusion_emb.unsqueeze(-1)
+        y = x + diffusion_emb
 
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
