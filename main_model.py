@@ -1,7 +1,10 @@
+import math
+
 import numpy as np
 import torch
 import torch.nn as nn
 from diff_models import diff_CSDI
+import torch.nn.functional as F
 
 
 def delt(masks, device):
@@ -19,6 +22,28 @@ def delt(masks, device):
     return deltas.permute(0, 2, 1)
 
 
+class TemporalDecay(nn.Module):
+    def __init__(self, target_dim, input_size):
+        super(TemporalDecay, self).__init__()
+        self.build(target_dim, input_size)
+
+    def build(self, target_dim, input_size):
+        self.W = nn.Parameter(torch.Tensor(target_dim, input_size))
+        self.b = nn.Parameter(torch.Tensor(target_dim))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1. / math.sqrt(self.W.size(0))
+        self.W.data.uniform_(-stdv, stdv)
+        if self.b is not None:
+            self.b.data.uniform_(-stdv, stdv)
+
+    def forward(self, d):
+        gamma = F.relu(F.linear(d, self.W, self.b))
+        gamma = torch.exp(-gamma)
+        return gamma
+
+
 class CSDI_base(nn.Module):
     def __init__(self, target_dim, config, device):
         super().__init__()
@@ -30,6 +55,8 @@ class CSDI_base(nn.Module):
         self.emb_feature_dim = config["model"]["featureemb"]
         self.is_unconditional = config["model"]["is_unconditional"]
         self.target_strategy = config["model"]["target_strategy"]
+
+        self.temporalDecay = TemporalDecay(target_dim, 32)
 
         self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim + 1  # delta
         if self.is_unconditional == False:
@@ -111,8 +138,10 @@ class CSDI_base(nn.Module):
 
         delta = delt(cond_mask, self.device)
         # print("delta", delta[0][0], sum(delta[0][0]))
-        delta = torch.softmax(delta, dim=-1).unsqueeze(1)
+        # delta = torch.softmax(delta, dim=-1).unsqueeze(1)
         # print("delta_softmax", delta[0][0], sum(delta[0][0]))
+        delta = self.target_dim(delta)
+        print(delta.shape)
 
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
         side_info = side_info.permute(0, 3, 2, 1)  # (B,*,K,L)
