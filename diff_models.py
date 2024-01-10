@@ -123,6 +123,7 @@ class diff_CSDI(nn.Module):
 
         skip = []
         for layer in self.residual_layers:
+            x = self.s4_layer(x.permute(2, 0, 1)).permute(1, 2, 0)
             x, skip_connection = layer(x, cond_info, diffusion_emb)
             skip.append(skip_connection)
 
@@ -134,8 +135,6 @@ class diff_CSDI(nn.Module):
         # x_s4 = self.forward_s4(x, base_shape)
         # x_feature = self.forward_feature(x, base_shape)
         # x = torch.tanh(x_s4) * torch.sigmoid(x_feature)
-
-        x = self.s4_layer(x.permute(2, 0, 1)).permute(1, 2, 0)
 
         x = self.output_projection1(x)  # (B,channel,K*L)
         x = F.relu(x)
