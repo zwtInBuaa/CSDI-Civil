@@ -126,9 +126,10 @@ class diff_CSDI(nn.Module):
             skip.append(skip_connection)
 
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
-        x = x.reshape(B, self.channels, K * L)
 
         base_shape = x.shape
+        x = x.reshape(B, self.channels, K * L)
+
         x_s4 = self.forward_s4(x, base_shape)
         x_feature = self.forward_feature(x, base_shape)
         x = torch.tanh(x_s4) * torch.sigmoid(x_feature)
