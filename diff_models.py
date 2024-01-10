@@ -123,7 +123,9 @@ class diff_CSDI(nn.Module):
 
         skip = []
         for layer in self.residual_layers:
+            x = x.reshape(B, self.channels, K * L)
             x = self.s4_layer(x.permute(2, 0, 1)).permute(1, 2, 0)
+            x = x.reshape(B, self.channels, K, L)
             x, skip_connection = layer(x, cond_info, diffusion_emb)
             skip.append(skip_connection)
 
