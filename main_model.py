@@ -8,12 +8,14 @@ def delt(masks):
     B, L, K = masks.shape
     # [T, D] = masks.shape
     deltas = [[] for _ in range(B)]
-    
+
     for b in range(B):
         for l in range(L):
             if l == 0:
                 deltas[b].append(np.zeros(K, dtype='float'))
             else:
+                print(masks[b][l])
+                print(deltas[b][-1])
                 deltas[b].append(
                     np.ones(K, dtype='float') + (1 - masks[b][l]) * deltas[b][-1].tolist())
 
