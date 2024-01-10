@@ -93,9 +93,13 @@ class diff_CSDI(nn.Module):
             skip.append(skip_connection)
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
         skip = []
+        i = 0
         for layer in self.residual_layers:
+            if i == 3:
+                break
             x, skip_connection = layer(x, cond_info, diffusion_emb)
             skip.append(skip_connection)
+            i += 1
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
 
         x = x.reshape(B, self.channels, K * L)
