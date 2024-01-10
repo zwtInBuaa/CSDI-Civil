@@ -23,6 +23,7 @@ class CSDI_base(nn.Module):
     def __init__(self, target_dim, config, device):
         super().__init__()
         self.device = device
+        self.batch_size = config["train"]["batch_size"]
         self.target_dim = target_dim
 
         self.emb_time_dim = config["model"]["timeemb"]
@@ -30,9 +31,9 @@ class CSDI_base(nn.Module):
         self.is_unconditional = config["model"]["is_unconditional"]
         self.target_strategy = config["model"]["target_strategy"]
 
-        self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim
+        self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim + 1  # delta
         if self.is_unconditional == False:
-            self.emb_total_dim += 2  # for conditional mask
+            self.emb_total_dim += 1 + 1  # cond_mask,cond_obs
         self.embed_layer = nn.Embedding(
             num_embeddings=self.target_dim, embedding_dim=self.emb_feature_dim
         )
@@ -109,12 +110,11 @@ class CSDI_base(nn.Module):
         feature_embed = feature_embed.unsqueeze(0).unsqueeze(0).expand(B, L, -1, -1)
 
         delta = delt(cond_mask, self.device)
-        # delta_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
-        # time_embed = time_embed.unsqueeze(2).expand(-1, -1, K, -1)
-        print("delta", delta, delta.shape)
+        delta = torch.softmax(delta, dim=-1).unsqueeze(1)
 
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
         side_info = side_info.permute(0, 3, 2, 1)  # (B,*,K,L)
+        side_info = torch.cat([side_info, delta], dim=1)
 
         if self.is_unconditional == False:
             side_mask = cond_mask.unsqueeze(1)  # (B,1,K,L)
