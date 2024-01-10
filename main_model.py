@@ -113,6 +113,7 @@ class CSDI_base(nn.Module):
         print("delta", delta)
         delta = torch.softmax(delta, dim=-1).unsqueeze(1)
         print("delta_softmax", torch.sum(delta[0][0]))
+        
 
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
         side_info = side_info.permute(0, 3, 2, 1)  # (B,*,K,L)
