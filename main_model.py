@@ -81,10 +81,13 @@ class CSDI_base(nn.Module):
         return cond_mask
 
     def get_side_info(self, observed_tp, cond_mask):
+        print("cond_mask", cond_mask, cond_mask.shape)
+        print("observed_tp", observed_tp, observed_tp.shape)
         B, K, L = cond_mask.shape
 
         time_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
         time_embed = time_embed.unsqueeze(2).expand(-1, -1, K, -1)
+        print("time_embed", time_embed, time_embed.shape)
         feature_embed = self.embed_layer(
             torch.arange(self.target_dim).to(self.device)
         )  # (K,emb)
