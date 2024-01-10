@@ -7,7 +7,7 @@ from diff_models import diff_CSDI
 def delt(masks, device):
     B, L, K = masks.shape
     # [T, D] = masks.shape
-    deltas = [[] for _ in range(B)]
+    deltas = [[torch.zeros(K, dtype=torch.float).to(device)] for _ in range(B)]
     deltas = torch.tensor(deltas).to(device)
 
     for b in range(B):
