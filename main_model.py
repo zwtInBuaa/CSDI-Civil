@@ -14,7 +14,8 @@ def delt(masks):
             if l == 0:
                 deltas[b].append(np.zeros(K, dtype='float'))
             else:
-                deltas[b].append(np.ones(K, dtype='float') + (1 - masks[b][l] * deltas[b][-1]))
+                deltas[b].append(
+                    np.ones(K, dtype='float') + (1 - masks[b][l]).cpu().numpy() * deltas[b][-1].cpu().numpy())
 
     return deltas
 
