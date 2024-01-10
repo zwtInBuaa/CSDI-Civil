@@ -4,6 +4,21 @@ import torch.nn as nn
 from diff_models import diff_CSDI
 
 
+def delt(masks):
+    B, L, K = masks.shape
+    # [T, D] = masks.shape
+    deltas = [[] for _ in range(B)]
+
+    for b in range(B):
+        for l in range(L):
+            if l == 0:
+                deltas[b].append(np.zeros(K, dtype='float'))
+            else:
+                deltas[b].append(np.ones(K, dtype='float') + (1 - masks[b][l] * deltas[-1]))
+
+    return deltas
+
+
 class CSDI_base(nn.Module):
     def __init__(self, target_dim, config, device):
         super().__init__()
@@ -81,17 +96,20 @@ class CSDI_base(nn.Module):
         return cond_mask
 
     def get_side_info(self, observed_tp, cond_mask):
-        print("cond_mask", cond_mask, cond_mask.shape)
-        print("observed_tp", observed_tp, observed_tp.shape)
+        # print("cond_mask", cond_mask, cond_mask.shape)
+        # print("observed_tp", observed_tp, observed_tp.shape)
         B, K, L = cond_mask.shape
 
         time_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
         time_embed = time_embed.unsqueeze(2).expand(-1, -1, K, -1)
-        print("time_embed", time_embed, time_embed.shape)
+        # print("time_embed", time_embed, time_embed.shape)
         feature_embed = self.embed_layer(
             torch.arange(self.target_dim).to(self.device)
         )  # (K,emb)
         feature_embed = feature_embed.unsqueeze(0).unsqueeze(0).expand(B, L, -1, -1)
+
+        delta = delt(cond_mask)
+        print("delta", delta, delta.shape)
 
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
         side_info = side_info.permute(0, 3, 2, 1)  # (B,*,K,L)
