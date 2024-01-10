@@ -5,20 +5,17 @@ from diff_models import diff_CSDI
 
 
 def delt(masks, device):
-    B, L, K = masks.shape
-    # [T, D] = masks.shape
+    B, K, L = masks.shape  # [batch, length, feature]
     deltas = torch.zeros(B, L, K, dtype=torch.float).to(device)
 
     for b in range(B):
         for l in range(L):
             if l == 0:
                 deltas[b] = torch.zeros(K, dtype=torch.float).to(device)
-
             else:
                 deltas[b][l] = torch.ones(K, dtype=torch.float).to(device) + (1 - masks[b][l]) * deltas[b][l - 1]
 
-    print(deltas, deltas.shape)
-    return deltas
+    return deltas.permute(0, 2, 1)
 
 
 class CSDI_base(nn.Module):
@@ -111,6 +108,8 @@ class CSDI_base(nn.Module):
         feature_embed = feature_embed.unsqueeze(0).unsqueeze(0).expand(B, L, -1, -1)
 
         delta = delt(cond_mask, self.device)
+        delta_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
+        time_embed = time_embed.unsqueeze(2).expand(-1, -1, K, -1)
         print("delta", delta, delta.shape)
 
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
