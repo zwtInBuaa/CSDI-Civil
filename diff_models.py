@@ -71,6 +71,8 @@ class diff_CSDI(nn.Module):
             embedding_dim=config["diffusion_embedding_dim"],
         )
 
+        self.s4_layer = S4Layer(features=self.channels, lmax=100)
+
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
         self.output_projection2 = Conv1d_with_init(self.channels, 1, 1)
@@ -87,6 +89,24 @@ class diff_CSDI(nn.Module):
                 for _ in range(config["layers"])
             ]
         )
+
+    def forward_s4(self, y, base_shape):
+        B, channel, K, L = base_shape
+        if L == 1:
+            return y
+        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
+        y = self.s4_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+        return y
+
+    def forward_feature(self, y, base_shape):
+        B, channel, K, L = base_shape
+        if K == 1:
+            return y
+        y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
+        y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
+        return y
 
     def forward(self, x, cond_info, diffusion_step):
         # print("diffusion_step", diffusion_step, diffusion_step.shape)
@@ -107,6 +127,12 @@ class diff_CSDI(nn.Module):
 
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
         x = x.reshape(B, self.channels, K * L)
+
+        base_shape = x.shape
+        x_s4 = self.forward_s4(x, base_shape)
+        x_feature = self.forward_feature(x, base_shape)
+        x = torch.tanh(x_s4) * torch.sigmoid(x_feature)
+
         x = self.output_projection1(x)  # (B,channel,K*L)
         x = F.relu(x)
         x = self.output_projection2(x)  # (B,1,K*L)
