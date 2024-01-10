@@ -72,7 +72,7 @@ class diff_CSDI(nn.Module):
         )
 
         self.s4_layer = S4Layer(features=self.channels, lmax=100)
-        self.feature_layer = get_torch_trans(heads=self.nheads, layers=1, channels=self.channels)
+        self.feature_layer = get_torch_trans(heads=8, layers=1, channels=self.channels)
 
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
