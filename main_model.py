@@ -13,8 +13,7 @@ def delt(masks, device):
     for b in range(B):
         for l in range(L):
             if l == 0:
-                zeros = torch.zeros(K, dtype=torch.float).to(device)
-                deltas[b] = torch.cat((deltas[b], zeros))
+                deltas[b] = torch.zeros(K, dtype=torch.float).to(device)
 
             else:
                 print(masks[b][l])
