@@ -100,7 +100,7 @@ class diff_CSDI(nn.Module):
             x, skip_connection = layer(x, cond_info, diffusion_emb)
             skip.append(skip_connection)
             i += 1
-        x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
+        x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(4)
 
         x = x.reshape(B, self.channels, K * L)
         x = self.output_projection1(x)  # (B,channel,K*L)
