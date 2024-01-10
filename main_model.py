@@ -78,7 +78,7 @@ class CSDI_base(nn.Module):
         # delta[B,K,L]
         B, K, L = delta.shape
         pe = torch.zeros(B, K, L, d_model).to(self.device)
-        delta1 = delta.unsqueeze(-1)
+        delta1 = delta.unsqueeze(-1).expand(-1, -1, -1, d_model)
         div_term = 1 / torch.pow(
             10000.0, torch.arange(0, d_model, 2).to(self.device) / d_model
         )
