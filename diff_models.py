@@ -91,7 +91,7 @@ class diff_CSDI(nn.Module):
 
         self.diffusion_embedding = DiffusionEmbedding(
             num_steps=config["num_steps"],
-            embedding_dim=config["embedding_dim"],
+            embedding_dim=config["diffusion_embedding_dim"],
         )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
