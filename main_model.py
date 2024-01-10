@@ -117,7 +117,6 @@ class CSDI_base(nn.Module):
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
         side_info = side_info.permute(0, 3, 2, 1)  # (B,*,K,L)
         side_info = torch.cat([side_info, delta], dim=1)
-
         if self.is_unconditional == False:
             side_mask = cond_mask.unsqueeze(1)  # (B,1,K,L)
             side_info = torch.cat([side_info, side_mask], dim=1)
