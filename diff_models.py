@@ -61,29 +61,6 @@ class DiffusionEmbedding(nn.Module):
         return table
 
 
-class TimeEncode(nn.Module):
-    def __init__(self, expand_dim, factor=5):
-        super(TimeEncode, self).__init__()
-
-        self.time_dim = expand_dim
-        self.factor = factor
-        self.basis_freq = nn.Parameter((1 / 10 ** torch.linspace(0, 9, self.time_dim)).float())
-        self.phase = nn.Parameter(torch.zeros(self.time_dim).float())
-
-    def forward(self, ts):
-        # ts: [N,L]
-        batch_size = ts.size(0)
-
-        ts = ts.view(batch_size, 1)  # [N,L, 1]
-        map_ts = ts * self.basis_freq.view(1, 1, -1)  # [N, L, time_dim]
-        map_ts += self.phase.view(1, 1, -1)
-
-        map_ts[:, :, 0::2] = torch.cos(map_ts[:, :, 0::2].clone())
-        map_ts[:, :, 1::2] = torch.sin(map_ts[:, :, 1::2].clone())
-
-        return map_ts
-
-
 class diff_CSDI(nn.Module):
     def __init__(self, config, inputdim=2):
         super().__init__()
