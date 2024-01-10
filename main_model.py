@@ -78,7 +78,7 @@ class CSDI_base(nn.Module):
         # delta[B,K,L]
         B, K, L = delta.shape
         pe = torch.zeros(B, K, L, d_model).to(self.device)
-        delta1 = delta.unsqueeze(-1).expand(-1, -1, -1, d_model)
+        delta1 = delta.unsqueeze(-1)
         div_term = 1 / torch.pow(
             10000.0, torch.arange(0, d_model, 2).to(self.device) / d_model
         )
@@ -128,7 +128,7 @@ class CSDI_base(nn.Module):
 
         delta = delt(cond_mask, self.device)
         delta = self.delta_embedding(delta, self.emb_time_dim)
-        print(delta.shape)
+        # print(delta.shape)
         # print("delta", delta[0][0], sum(delta[0][0]))
         # delta = torch.softmax(delta, dim=-1).unsqueeze(1)
         # print("delta_softmax", delta[0][0], sum(delta[0][0]))
