@@ -111,7 +111,7 @@ class ResidualBlock(nn.Module):
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.s4_init_layer = S4Layer(features=channels, lmax=100)
+        self.s4_init_layer = S4Layer(features=channels, lmax=251, bidirectional=False)
         self.s4_end_layer = S4Layer(features=channels * 2, lmax=100)
 
     def forward_time(self, y, base_shape):
