@@ -76,7 +76,6 @@ class diff_CSDI(nn.Module):
         )
 
     def forward(self, x, cond_info, diffusion_step):
-        # print("diffusion_step", diffusion_step, diffusion_step.shape)
         B, inputdim, K, L = x.shape
 
         x = x.reshape(B, inputdim, K * L)
@@ -85,18 +84,12 @@ class diff_CSDI(nn.Module):
         x = x.reshape(B, self.channels, K, L)
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
-        # print("diffusion_emb", diffusion_emb, diffusion_step.shape)
 
         skip = []
         for layer in self.residual_layers:
             x, skip_connection = layer(x, cond_info, diffusion_emb)
             skip.append(skip_connection)
-        # x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
-        # skip = []
-        for layer in reversed(self.residual_layers):
-            x, skip_connection = layer(x, cond_info, diffusion_emb)
-            skip.append(skip_connection)
-        x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers) * 2)
+        x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
 
         x = x.reshape(B, self.channels, K * L)
         x = self.output_projection1(x)  # (B,channel,K*L)
