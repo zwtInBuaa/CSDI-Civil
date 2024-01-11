@@ -140,13 +140,13 @@ class ResidualBlock(nn.Module):
         base_shape = x.shape
         x = x.reshape(B, channel, K * L)
 
-        y = x
+        diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
+        y = x + diffusion_emb
+
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
-        diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
-        y = y + diffusion_emb
         y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
