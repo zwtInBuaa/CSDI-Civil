@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import math
 import copy
 from layers.S4Layer import S4Layer
+from layers.S4Improved import S4
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -111,8 +112,7 @@ class ResidualBlock(nn.Module):
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.s4_init_layer = S4Layer(features=channels, lmax=251, bidirectional=False)
-        self.s4_end_layer = S4Layer(features=channels * 2, lmax=100)
+        self.s4_init_layer = S4(d_model=channels, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -144,7 +144,7 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y, _ = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
