@@ -34,6 +34,7 @@ class DiffusionEmbedding(nn.Module):
 
     def forward(self, diffusion_step):
         x = self.embedding[diffusion_step]
+        print(x.shape)
         x = self.projection1(x)
         x = F.silu(x)
         x = self.projection2(x)
