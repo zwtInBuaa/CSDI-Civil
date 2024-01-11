@@ -151,7 +151,7 @@ class ResidualBlock(nn.Module):
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
-        y = x + diffusion_emb
+        y = y + diffusion_emb
 
         y = self.mid_projection(y)
 
