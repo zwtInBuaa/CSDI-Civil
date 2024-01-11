@@ -3,8 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import copy
-# from layers.S4Layer import S4Layer
-from layers.S4Improved import S4Layer
+from layers.S4Layer import S4Layer
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -151,13 +150,15 @@ class ResidualBlock(nn.Module):
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
-        y = self.mid_projection(y)
+        # y = self.mid_projection(y)
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
-        cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
+        cond_info = self.cond_projection1(cond_info)  # (B,2*channel,K*L)
         # cond_info = self.s4(cond_info)
         y = y + cond_info
+
+        y = self.mid_projection(y)
 
         # y = self.forward_s4(y, base_shape)
 
