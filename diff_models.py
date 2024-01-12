@@ -78,11 +78,6 @@ class diff_CSDI(nn.Module):
             num_steps=config["num_steps"],
             embedding_dim=config["diffusion_embedding_dim"],
         )
-        self.mlp = nn.Sequential(
-            LinearNorm(self.channels * 2, self.channels * 4, bias=False),
-            Mish(),
-            LinearNorm(self.channels * 4, self.channels * 2, bias=False),
-        )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
@@ -110,7 +105,6 @@ class diff_CSDI(nn.Module):
         x = x.reshape(B, self.channels, K, L)
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
-        diffusion_emb = self.mlp(diffusion_emb)
 
         skip = []
         for layer in self.residual_layers:
@@ -174,9 +168,9 @@ class ResidualBlock(nn.Module):
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
-        y_time = self.forward_time(y, base_shape)
+        y_feature = self.forward_feature(self.forward_time(y, base_shape), base_shape)
         # y_time = self.forward_time(y, base_shape)
-        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y_time = self.forward_time(self.forward_feature(y, base_shape), base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
         y = self.mid_projection(y)
