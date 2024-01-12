@@ -79,9 +79,9 @@ class diff_CSDI(nn.Module):
             embedding_dim=config["diffusion_embedding_dim"],
         )
         self.mlp = nn.Sequential(
-            LinearNorm(self.channels, self.channels * 4, bias=False),
+            LinearNorm(self.channels * 2, self.channels * 4, bias=False),
             Mish(),
-            LinearNorm(self.channels * 4, self.channels, bias=False),
+            LinearNorm(self.channels * 4, self.channels * 2, bias=False),
         )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
