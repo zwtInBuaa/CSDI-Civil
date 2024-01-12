@@ -8,7 +8,7 @@ from layers.S4Layer import S4Layer
 
 def get_torch_trans(heads=8, layers=1, channels=64):
     encoder_layer = nn.TransformerEncoderLayer(
-        d_model=channels, nhead=heads, dim_feedforward=64, activation="gelu"
+        d_model=channels, nhead=heads, dim_feedforward=64, batch_first=True, norm_first=False, dropout=0.0
     )
     return nn.TransformerEncoder(encoder_layer, num_layers=layers)
 
@@ -111,6 +111,8 @@ class ResidualBlock(nn.Module):
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.feature_layer1 = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.feature_layer2 = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
     def forward_time(self, y, base_shape):
@@ -122,12 +124,29 @@ class ResidualBlock(nn.Module):
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
+    # def forward_feature(self, y, base_shape):
+    #     B, channel, K, L = base_shape
+    #     if K == 1:
+    #         return y
+    #     y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
+    #     y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+    #     y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
+    #     return y
     def forward_feature(self, y, base_shape):
+        """batch_first = True"""
         B, channel, K, L = base_shape
         if K == 1:
             return y
-        y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        # y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
+        y = y.reshape(B, channel, K, L)
+        y1, y2 = torch.chunk(y, 2, dim=2)  # split by features.
+        K1 = y1.shape[2]
+        K2 = y2.shape[2]
+        y1 = y1.permute(0, 3, 1, 2).reshape(B * L, channel, K1)  # (BL,C,K1)
+        y2 = y2.permute(0, 3, 1, 2).reshape(B * L, channel, K2)  # (BL,C,K2)
+        y1 = self.feature_layer1(y1.permute(0, 2, 1)).permute(0, 2, 1)  # (BL,K1,C), (BL,C,K1)
+        y2 = self.feature_layer2(y2.permute(0, 2, 1)).permute(0, 2, 1)  # (BL,K2,C), (BL,C,K2)
+        y = torch.cat([y1, y2], dim=2)  # (BL,C,K)
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
