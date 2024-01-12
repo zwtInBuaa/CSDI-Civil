@@ -6,6 +6,11 @@ import copy
 from layers.S4Layer import S4Layer
 
 
+class Mish(nn.Module):
+    def forward(self, x):
+        return x * torch.tanh(F.softplus(x))
+
+
 def get_torch_trans(heads=8, layers=1, channels=64):
     encoder_layer = nn.TransformerEncoderLayer(
         d_model=channels, nhead=heads, dim_feedforward=64, batch_first=True, norm_first=False, dropout=0.0
@@ -17,6 +22,22 @@ def Conv1d_with_init(in_channels, out_channels, kernel_size):
     layer = nn.Conv1d(in_channels, out_channels, kernel_size)
     nn.init.kaiming_normal_(layer.weight)
     return layer
+
+
+class LinearNorm(nn.Module):
+    """LinearNorm Projection"""
+
+    def __init__(self, in_features, out_features, bias=False):
+        super(LinearNorm, self).__init__()
+        self.linear = nn.Linear(in_features, out_features, bias)
+
+        nn.init.xavier_uniform_(self.linear.weight)
+        if bias:
+            nn.init.constant_(self.linear.bias, 0.0)
+
+    def forward(self, x):
+        x = self.linear(x)
+        return x
 
 
 class DiffusionEmbedding(nn.Module):
@@ -57,6 +78,11 @@ class diff_CSDI(nn.Module):
             num_steps=config["num_steps"],
             embedding_dim=config["diffusion_embedding_dim"],
         )
+        self.mlp = nn.Sequential(
+            LinearNorm(self.channels, self.channels * 4, bias=False),
+            Mish(),
+            LinearNorm(self.channels * 4, self.channels, bias=False),
+        )
 
         self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
@@ -84,6 +110,7 @@ class diff_CSDI(nn.Module):
         x = x.reshape(B, self.channels, K, L)
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
+        diffusion_step = self.mlp(diffusion_step)
 
         skip = []
         for layer in self.residual_layers:
@@ -111,8 +138,6 @@ class ResidualBlock(nn.Module):
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.feature_layer1 = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.feature_layer2 = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
     def forward_time(self, y, base_shape):
@@ -124,29 +149,12 @@ class ResidualBlock(nn.Module):
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
-    # def forward_feature(self, y, base_shape):
-    #     B, channel, K, L = base_shape
-    #     if K == 1:
-    #         return y
-    #     y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-    #     y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-    #     y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
-    #     return y
     def forward_feature(self, y, base_shape):
-        """batch_first = True"""
         B, channel, K, L = base_shape
         if K == 1:
             return y
-        # y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        y = y.reshape(B, channel, K, L)
-        y1, y2 = torch.chunk(y, 2, dim=2)  # split by features.
-        K1 = y1.shape[2]
-        K2 = y2.shape[2]
-        y1 = y1.permute(0, 3, 1, 2).reshape(B * L, channel, K1)  # (BL,C,K1)
-        y2 = y2.permute(0, 3, 1, 2).reshape(B * L, channel, K2)  # (BL,C,K2)
-        y1 = self.feature_layer1(y1.permute(0, 2, 1)).permute(0, 2, 1)  # (BL,K1,C), (BL,C,K1)
-        y2 = self.feature_layer2(y2.permute(0, 2, 1)).permute(0, 2, 1)  # (BL,K2,C), (BL,C,K2)
-        y = torch.cat([y1, y2], dim=2)  # (BL,C,K)
+        y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
+        y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
