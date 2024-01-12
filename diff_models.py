@@ -158,7 +158,7 @@ class ResidualBlock(nn.Module):
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
-        cond_info = self.s4_condInfo_layer(cond_info)
+        cond_info = self.s4_condInfo_layer(cond_info.permute(2, 0, 1)).permute(1, 2, 0)
         # cond_info = self.s4(cond_info)
         y = y + cond_info
 
