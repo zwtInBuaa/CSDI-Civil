@@ -110,7 +110,7 @@ class diff_CSDI(nn.Module):
         x = x.reshape(B, self.channels, K, L)
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
-        diffusion_step = self.mlp(diffusion_step)
+        diffusion_emb = self.mlp(diffusion_emb)
 
         skip = []
         for layer in self.residual_layers:
