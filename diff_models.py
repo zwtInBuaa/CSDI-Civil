@@ -112,7 +112,6 @@ class ResidualBlock(nn.Module):
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
-        self.s4_condInfo_layer = S4Layer(features=2 * channels, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -158,7 +157,6 @@ class ResidualBlock(nn.Module):
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
-        cond_info = self.s4_condInfo_layer(cond_info.permute(2, 0, 1)).permute(1, 2, 0)
         # cond_info = self.s4(cond_info)
         y = y + cond_info
 
