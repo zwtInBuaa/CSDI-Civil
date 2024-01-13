@@ -8,7 +8,7 @@ from layers.S4Layer import S4Layer
 from layers.longformer import LongformerTS
 from layers.spatial_conv import SpatialDiffusionConv
 from layers.bilstm import BiLSTM
-from layers.gril import BiGRIL
+# from layers.gril import BiGRIL
 from layers.tcn import TemporalConvNet
 
 
@@ -20,7 +20,7 @@ class Mish(nn.Module):
         return x * torch.tanh(F.softplus(x))
 
 
-def get_tcn(input_size, hidden_size=[16, 32, 64]):
+def get_tcn(input_size, hidden_size=[64, 128, 256]):
     return TemporalConvNet(input_size, hidden_size)
 
 
@@ -206,7 +206,8 @@ class ResidualBlock(nn.Module):
 
         y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
-        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y_feature = self.feature_layer(y)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
         y = self.mid_projection(y)
