@@ -5,6 +5,10 @@ import math
 import copy
 from layers.S4Layer import S4Layer
 
+from layers.longformer import LongformerTS
+from layers.spatial_conv import SpatialDiffusionConv
+from layers.bilstm import BiLSTM
+
 
 # from pypots.imputation.transformer import EncoderLayer, PositionalEncoding
 
@@ -14,10 +18,22 @@ class Mish(nn.Module):
         return x * torch.tanh(F.softplus(x))
 
 
-def get_torch_trans(heads=8, layers=1, channels=64):
+def get_bilstm(channels, hidden_size=64, n_layers=1):
+    return BiLSTM(input_size=channels, hidden_size=hidden_size, num_layers=n_layers)
+
+
+def get_torch_trans(heads=8, layers=1, channels=64, hidden_size=64):
     encoder_layer = nn.TransformerEncoderLayer(
-        d_model=channels, nhead=heads, dim_feedforward=64, batch_first=True, norm_first=False, dropout=0.0
+        d_model=channels, nhead=heads, dim_feedforward=hidden_size, activation="gelu"
     )
+    return nn.TransformerEncoder(encoder_layer, num_layers=layers)
+
+
+def get_longformerTS(heads=8, layers=1, channels=64, hidden_size=64, attention_window=27, attention_dilation=1,
+                     attention_mode="sliding_chunks"):
+    encoder_layer = LongformerTS(d_model=channels, nhead=heads, dim_feedforward=hidden_size, activation="gelu",
+                                 attention_window=attention_window, attention_dilation=attention_dilation,
+                                 attention_mode=attention_mode)
     return nn.TransformerEncoder(encoder_layer, num_layers=layers)
 
 
@@ -136,7 +152,8 @@ class ResidualBlock(nn.Module):
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
         # self.time_layer = S4Layer(features=channels, lmax=100)
-        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.time_layer = get_bilstm(channels=channels, hidden_size=64)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
         self.s4_end_layer = S4Layer(features=2 * channels, lmax=100)
@@ -191,9 +208,6 @@ class ResidualBlock(nn.Module):
         cond_info = cond_info.reshape(B, cond_dim, K * L)
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         y = y + cond_info
-
-        diffusion_emb = self.diffusion_conv(diffusion_emb)
-        y = y + diffusion_emb
 
         # y = self.forward_s4(y, (B, channel * 2, K, L))
         # y = self.forward_time(y, (B, channel * 2, K, L))
