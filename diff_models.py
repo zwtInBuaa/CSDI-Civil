@@ -159,12 +159,13 @@ class ResidualBlock(nn.Module):
 
         # self.time_layer = S4Layer(features=channels, lmax=100)
         # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        # self.time_layer = get_bilstm(channels=channels, hidden_size=64)
+        self.time_layer = get_bilstm(channels=channels, hidden_size=64)
         # self.time_layer = get_tcn(input_size=channels)
 
-        self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=9)
+        # self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=9)
 
-        self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.feature_layer = get_bilstm(channels=channels, hidden_size=64)
 
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
