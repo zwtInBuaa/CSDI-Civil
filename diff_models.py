@@ -104,7 +104,7 @@ class diff_CSDI(nn.Module):
 
     def forward(self, x, cond_info, diffusion_step):
         B, inputdim, K, L = x.shape
-        cond_obs, noise_target = torch.chunk(x, dim=1)
+        cond_obs, noise_target = torch.chunk(x, 2, dim=1)
         cond_obs = torch.squeeze(cond_obs, dim=1)
         cond_obs = self.cond_obs_s4(cond_obs.permute(2, 0, 1)).permute(1, 2, 0).unsqueeze(1)
         noise_target = torch.squeeze(noise_target, dim=1)
