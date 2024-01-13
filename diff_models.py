@@ -5,7 +5,7 @@ import math
 import copy
 from layers.S4Layer import S4Layer
 
-from pypots.imputation.transformer import EncoderLayer, PositionalEncoding
+# from pypots.imputation.transformer import EncoderLayer, PositionalEncoding
 
 
 class Mish(nn.Module):
