@@ -104,13 +104,6 @@ class diff_CSDI(nn.Module):
 
     def forward(self, x, cond_info, diffusion_step):
         B, inputdim, K, L = x.shape
-        cond_obs, noise_target = torch.chunk(x, 2, dim=1)
-        cond_obs = torch.squeeze(cond_obs, dim=1)
-        cond_obs = self.cond_obs_s4(cond_obs.permute(2, 0, 1)).permute(1, 2, 0).unsqueeze(1)
-        noise_target = torch.squeeze(noise_target, dim=1)
-        noise_target = self.cond_obs_s4(noise_target.permute(2, 0, 1)).permute(1, 2, 0).unsqueeze(1)
-        x = torch.cat([cond_obs, noise_target], dim=1)
-
         x = x.reshape(B, inputdim, K * L)
         x = self.input_projection(x)
         x = F.relu(x)
@@ -136,6 +129,7 @@ class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
+        self.diffusion_conv = Conv1d_with_init(channels, 2 * channels)
 
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
@@ -197,6 +191,9 @@ class ResidualBlock(nn.Module):
         cond_info = cond_info.reshape(B, cond_dim, K * L)
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         y = y + cond_info
+
+        diffusion_emb = self.diffusion_conv(diffusion_emb)
+        y = y + diffusion_emb
 
         # y = self.forward_s4(y, (B, channel * 2, K, L))
         # y = self.forward_time(y, (B, channel * 2, K, L))
