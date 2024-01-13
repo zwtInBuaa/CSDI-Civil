@@ -20,7 +20,7 @@ class Mish(nn.Module):
         return x * torch.tanh(F.softplus(x))
 
 
-def get_tcn(input_size, hidden_size=[64, 128, 256]):
+def get_tcn(input_size, hidden_size=[64, 128, 64]):
     return TemporalConvNet(input_size, hidden_size)
 
 
@@ -160,7 +160,10 @@ class ResidualBlock(nn.Module):
         # self.time_layer = S4Layer(features=channels, lmax=100)
         # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.time_layer = get_bilstm(channels=channels, hidden_size=64)
-        self.time_layer = get_tcn(input_size=channels)
+        # self.time_layer = get_tcn(input_size=channels)
+
+        self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=9)
+
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
@@ -206,8 +209,7 @@ class ResidualBlock(nn.Module):
 
         y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
-        # y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        y_feature = self.feature_layer(y)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
         y = self.mid_projection(y)
