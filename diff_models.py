@@ -183,17 +183,19 @@ class ResidualBlock(nn.Module):
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
-        y = self.forward_time(y, base_shape)
+        y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
         y = self.mid_projection(y)
         c_y = self.conv_cond(cond_info)
         y = y + c_y
 
         # y = self.forward_s4(y, (B, channel * 2, K, L))
-        y = self.forward_time(y, (B, channel * 2, K, L))
+        # y = self.forward_time(y, (B, channel * 2, K, L))
+
+
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
