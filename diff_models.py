@@ -272,14 +272,14 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y_all = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
         # y_time = self.forward_time(y, base_shape)
-        # y_time = self.forward_time(y, base_shape)
-        # y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
+        y_time = self.forward_time(y, base_shape)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = torch.sigmoid(y_time) * torch.tanh(y_feature) * torch.tanh(y)
 
         y = self.mid_projection(y)
 
@@ -288,7 +288,7 @@ class ResidualBlock(nn.Module):
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         y = y + cond_info
 
-        y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        # y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         # y = self.forward_s4(y, (B, channel * 2, K, L))
         # y = self.forward_time(y, (B, channel * 2, K, L))
