@@ -216,9 +216,9 @@ class ResidualBlock(nn.Module):
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
         # self.time_layer = S4Layer(features=channels, lmax=100)
-        self.time_layer = Conv1dBlock(channels, channels, L=2304, num_blocks=3)
+        # self.time_layer = Conv1dBlock(channels, channels, L=100, num_blocks=3)
 
-        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.time_layer = get_bilstm(channels=channels, hidden_size=64)
         # self.time_layer = get_tcn(input_size=channels)
 
@@ -228,21 +228,23 @@ class ResidualBlock(nn.Module):
         # self.feature_layer = get_bilstm(channels=channels, hidden_size=64)
 
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
+        self.s4_end_layer = S4Layer(features=channels, lmax=100)
+
+    def forward_time(self, y, base_shape):
+        B, channel, K, L = base_shape
+        if L == 1:
+            return y
+        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
+        y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+        return y
 
     # def forward_time(self, y, base_shape):
-    #     B, channel, K, L = base_shape
-    #     if L == 1:
-    #         return y
-    #     y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-    #     y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-    #     y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
+    #     B, C, K, L = base_shape
+    #     y = y.reshape(B, C, K, L).permute(0, 2, 1, 3).reshape(B * K, C, L)  # (B*K,C,L)
+    #     y = self.time_layer(y)  # (B*K,C,L)
+    #     y = y.reshape(B, K, C, L).permute(0, 2, 1, 3)  # (B,C,K,L)
     #     return y
-    def forward_time(self, y, base_shape):
-        B, C, K, L = base_shape
-        y = y.reshape(B, C, K, L).permute(0, 2, 1, 3).reshape(B * K, C, L)  # (B*K,C,L)
-        y = self.time_layer(y)  # (B*K,C,L)
-        y = y.reshape(B, K, C, L).permute(0, 2, 1, 3)  # (B,C,K,L)
-        return y
 
     def forward_feature(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -274,10 +276,10 @@ class ResidualBlock(nn.Module):
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
-        y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
-        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        y = torch.sigmoid(y_time) * torch.tanh(y_feature)
+        # y_time = self.forward_time(y, base_shape)
+        # y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
         y = self.mid_projection(y)
 
@@ -285,6 +287,8 @@ class ResidualBlock(nn.Module):
         cond_info = cond_info.reshape(B, cond_dim, K * L)
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         y = y + cond_info
+
+        y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         # y = self.forward_s4(y, (B, channel * 2, K, L))
         # y = self.forward_time(y, (B, channel * 2, K, L))
