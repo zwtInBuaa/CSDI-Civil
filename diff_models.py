@@ -228,7 +228,7 @@ class ResidualBlock(nn.Module):
         # self.feature_layer = get_bilstm(channels=channels, hidden_size=64)
 
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
-        self.s4_end_layer = S4Layer(features=channels, lmax=100)
+        self.s4_end_layer = S4Layer(features=2 * channels, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
