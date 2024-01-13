@@ -5,6 +5,8 @@ import math
 import copy
 from layers.S4Layer import S4Layer
 
+from pypots.imputation.transformer import EncoderLayer, PositionalEncoding
+
 
 class Mish(nn.Module):
     def forward(self, x):
@@ -124,8 +126,10 @@ class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
-        self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
-        self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
+        self.cond_projection = Conv1d_with_init(side_dim, channels, 1)
+        self.conv_cond = Conv1d_with_init(channels, 2 * channels, 1)
+
+        # self.cond_projection = Conv1d_with_init(side_dim, channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
@@ -162,7 +166,11 @@ class ResidualBlock(nn.Module):
         x = x.reshape(B, channel, K * L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
-        y = x + diffusion_emb
+
+        _, cond_dim, _, _ = cond_info.shape
+        cond_info = cond_info.reshape(B, cond_dim, K * L)
+        cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
+        y = x + diffusion_emb + cond_info
 
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
@@ -174,12 +182,8 @@ class ResidualBlock(nn.Module):
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
         y = self.mid_projection(y)
-
-        _, cond_dim, _, _ = cond_info.shape
-        cond_info = cond_info.reshape(B, cond_dim, K * L)
-        cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
-        # cond_info = self.s4(cond_info)
-        y = y + cond_info
+        c_y = self.cond_projection(cond_info)
+        y = y + c_y
 
         # y = self.forward_s4(y, base_shape)
 
