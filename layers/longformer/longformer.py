@@ -55,7 +55,7 @@ class LongformerTS(nn.TransformerEncoderLayer):
     def forward(self, src: Tensor, src_mask: Optional[Tensor] = None,
                 src_key_padding_mask: Optional[Tensor] = None, **kwargs) -> Tensor:
 
-        return super().forward(src, src_mask, src_key_padding_mask)
+        return super().forward(src, src_mask, src_key_padding_mask, **kwargs)
 
 
 class LongformerSelfAttention(nn.MultiheadAttention):
