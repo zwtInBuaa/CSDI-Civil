@@ -29,39 +29,33 @@ class LongformerTS(nn.TransformerEncoderLayer):
                  device=None,
                  dtype=None):
 
-
-
-        super().__init__(d_model, nhead, dim_feedforward, dropout, activation, layer_norm_eps, batch_first, norm_first, device, dtype)
+        super().__init__(d_model, nhead, dim_feedforward, dropout, activation, layer_norm_eps, batch_first, norm_first,
+                         device, dtype)
 
         if attention_mode == 'n2':
             pass  # do nothing, use BertSelfAttention instead
         else:
             self.self_attn = LongformerSelfAttention(
-                 d_model,
-                 nhead,
-                 dropout=dropout,
-                 bias=True,
-                 add_bias_kv=False,
-                 add_zero_attn=False,
-                 kdim=None,
-                 vdim=None,
-                 batch_first=batch_first,
-                 device=device,
-                 dtype=dtype,
-                 attention_window=attention_window,
-                 attention_dilation=attention_dilation,
-                 autoregressive=autoregressive,
-                 attention_mode=attention_mode)
+                d_model,
+                nhead,
+                dropout=dropout,
+                bias=True,
+                add_bias_kv=False,
+                add_zero_attn=False,
+                kdim=None,
+                vdim=None,
+                batch_first=batch_first,
+                device=device,
+                dtype=dtype,
+                attention_window=attention_window,
+                attention_dilation=attention_dilation,
+                autoregressive=autoregressive,
+                attention_mode=attention_mode)
 
     def forward(self, src: Tensor, src_mask: Optional[Tensor] = None,
-                src_key_padding_mask: Optional[Tensor] = None) -> Tensor:
+                src_key_padding_mask: Optional[Tensor] = None, **kwargs) -> Tensor:
 
         return super().forward(src, src_mask, src_key_padding_mask)
-
-
-
-
-
 
 
 class LongformerSelfAttention(nn.MultiheadAttention):
@@ -81,7 +75,8 @@ class LongformerSelfAttention(nn.MultiheadAttention):
                  attention_dilation=None,
                  autoregressive=False,
                  attention_mode='sliding_chunks'):
-        super().__init__(embed_dim, num_heads, dropout, bias, add_bias_kv, add_zero_attn, kdim, vdim, batch_first, device, dtype)
+        super().__init__(embed_dim, num_heads, dropout, bias, add_bias_kv, add_zero_attn, kdim, vdim, batch_first,
+                         device, dtype)
 
         self.query = nn.Linear(embed_dim, embed_dim)
         self.key = nn.Linear(embed_dim, embed_dim)
@@ -90,7 +85,6 @@ class LongformerSelfAttention(nn.MultiheadAttention):
         self.query_global = nn.Linear(embed_dim, embed_dim)
         self.key_global = nn.Linear(embed_dim, embed_dim)
         self.value_global = nn.Linear(embed_dim, embed_dim)
-
 
         self.attention_window = attention_window
         self.attention_dilation = attention_dilation
@@ -177,15 +171,18 @@ class LongformerSelfAttention(nn.MultiheadAttention):
         if remove_from_windowed_attention_mask is not None:
             # This implementation is fast and takes very little memory because num_heads x hidden_size = 1
             # from (bsz x seq_len) to (bsz x seq_len x num_heads x hidden_size)
-            remove_from_windowed_attention_mask = remove_from_windowed_attention_mask.unsqueeze(dim=-1).unsqueeze(dim=-1)
+            remove_from_windowed_attention_mask = remove_from_windowed_attention_mask.unsqueeze(dim=-1).unsqueeze(
+                dim=-1)
             # cast to float/half then replace 1's with -inf
-            float_mask = remove_from_windowed_attention_mask.type_as(q).masked_fill(remove_from_windowed_attention_mask, -10000.0)
+            float_mask = remove_from_windowed_attention_mask.type_as(q).masked_fill(remove_from_windowed_attention_mask,
+                                                                                    -10000.0)
             repeat_size = 1 if isinstance(self.attention_dilation, int) else len(self.attention_dilation)
             float_mask = float_mask.repeat(1, 1, repeat_size, 1)
             ones = float_mask.new_ones(size=float_mask.size())  # tensor of ones
             # diagonal mask with zeros everywhere and -inf inplace of padding
             if self.attention_mode == 'tvm':
-                d_mask = diagonaled_mm_tvm(ones, float_mask, self.attention_window, self.attention_dilation, False, 0, False)
+                d_mask = diagonaled_mm_tvm(ones, float_mask, self.attention_window, self.attention_dilation, False, 0,
+                                           False)
             elif self.attention_mode == "sliding_chunks":
                 d_mask = sliding_chunks_matmul_qk(ones, float_mask, self.attention_window, padding_value=0)
             elif self.attention_mode == "sliding_chunks_no_overlap":
@@ -208,7 +205,8 @@ class LongformerSelfAttention(nn.MultiheadAttention):
         attn_weights_float = F.softmax(attn_weights, dim=-1, dtype=torch.float32)  # use fp32 for numerical stability
         if key_padding_mask is not None:
             # softmax sometimes inserts NaN if all positions are masked, replace them with 0
-            attn_weights_float = torch.masked_fill(attn_weights_float, key_padding_mask.unsqueeze(-1).unsqueeze(-1), 0.0)
+            attn_weights_float = torch.masked_fill(attn_weights_float, key_padding_mask.unsqueeze(-1).unsqueeze(-1),
+                                                   0.0)
         attn_weights = attn_weights_float.type_as(attn_weights)
         attn_probs = F.dropout(attn_weights_float.type_as(attn_weights), p=self.dropout, training=self.training)
         v = v.view(seq_len, bsz, self.num_heads, self.head_dim).transpose(0, 1)
@@ -219,8 +217,10 @@ class LongformerSelfAttention(nn.MultiheadAttention):
             selected_v[selection_padding_mask_nonzeros] = v[extra_attention_mask_nonzeros]
             # use `matmul` because `einsum` crashes sometimes with fp16
             # attn = torch.einsum('blhs,bshd->blhd', (selected_attn_probs, selected_v))
-            attn = torch.matmul(selected_attn_probs.transpose(1, 2), selected_v.transpose(1, 2).type_as(selected_attn_probs)).transpose(1, 2)
-            attn_probs = attn_probs.narrow(-1, max_num_extra_indices_per_batch, attn_probs.size(-1) - max_num_extra_indices_per_batch).contiguous()
+            attn = torch.matmul(selected_attn_probs.transpose(1, 2),
+                                selected_v.transpose(1, 2).type_as(selected_attn_probs)).transpose(1, 2)
+            attn_probs = attn_probs.narrow(-1, max_num_extra_indices_per_batch,
+                                           attn_probs.size(-1) - max_num_extra_indices_per_batch).contiguous()
 
         if self.attention_mode == 'tvm':
             v = v.float().contiguous()
@@ -240,16 +240,20 @@ class LongformerSelfAttention(nn.MultiheadAttention):
         # and overwrite the attn tensor. TODO: remove the redundant computation
         if extra_attention_mask is not None:
             selected_hidden_states = hidden_states.new_zeros(max_num_extra_indices_per_batch, bsz, embed_dim)
-            selected_hidden_states[selection_padding_mask_nonzeros[::-1]] = hidden_states[extra_attention_mask_nonzeros[::-1]]
+            selected_hidden_states[selection_padding_mask_nonzeros[::-1]] = hidden_states[
+                extra_attention_mask_nonzeros[::-1]]
 
             q = self.query_global(selected_hidden_states)
             k = self.key_global(hidden_states)
             v = self.value_global(hidden_states)
             q /= math.sqrt(self.head_dim)
 
-            q = q.contiguous().view(max_num_extra_indices_per_batch, bsz * self.num_heads, self.head_dim).transpose(0, 1)  # (bsz*self.num_heads, max_num_extra_indices_per_batch, head_dim)
-            k = k.contiguous().view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)  # bsz * self.num_heads, seq_len, head_dim)
-            v = v.contiguous().view(-1, bsz * self.num_heads, self.head_dim).transpose(0, 1)  # bsz * self.num_heads, seq_len, head_dim)
+            q = q.contiguous().view(max_num_extra_indices_per_batch, bsz * self.num_heads, self.head_dim).transpose(0,
+                                                                                                                    1)  # (bsz*self.num_heads, max_num_extra_indices_per_batch, head_dim)
+            k = k.contiguous().view(-1, bsz * self.num_heads, self.head_dim).transpose(0,
+                                                                                       1)  # bsz * self.num_heads, seq_len, head_dim)
+            v = v.contiguous().view(-1, bsz * self.num_heads, self.head_dim).transpose(0,
+                                                                                       1)  # bsz * self.num_heads, seq_len, head_dim)
             attn_weights = torch.bmm(q, k.transpose(1, 2))
             assert list(attn_weights.size()) == [bsz * self.num_heads, max_num_extra_indices_per_batch, seq_len]
 
@@ -261,14 +265,17 @@ class LongformerSelfAttention(nn.MultiheadAttention):
                     -10000.0,
                 )
             attn_weights = attn_weights.view(bsz * self.num_heads, max_num_extra_indices_per_batch, seq_len)
-            attn_weights_float = F.softmax(attn_weights, dim=-1, dtype=torch.float32)  # use fp32 for numerical stability
+            attn_weights_float = F.softmax(attn_weights, dim=-1,
+                                           dtype=torch.float32)  # use fp32 for numerical stability
             attn_probs = F.dropout(attn_weights_float.type_as(attn_weights), p=self.dropout, training=self.training)
             selected_attn = torch.bmm(attn_probs, v)
             assert list(selected_attn.size()) == [bsz * self.num_heads, max_num_extra_indices_per_batch, self.head_dim]
 
             selected_attn_4d = selected_attn.view(bsz, self.num_heads, max_num_extra_indices_per_batch, self.head_dim)
-            nonzero_selected_attn = selected_attn_4d[selection_padding_mask_nonzeros[0], :, selection_padding_mask_nonzeros[1]]
-            attn[extra_attention_mask_nonzeros[::-1]] = nonzero_selected_attn.view(len(selection_padding_mask_nonzeros[0]), -1).type_as(hidden_states)
+            nonzero_selected_attn = selected_attn_4d[selection_padding_mask_nonzeros[0], :,
+                                    selection_padding_mask_nonzeros[1]]
+            attn[extra_attention_mask_nonzeros[::-1]] = nonzero_selected_attn.view(
+                len(selection_padding_mask_nonzeros[0]), -1).type_as(hidden_states)
 
         context_layer = attn.transpose(0, 1)
         if output_attentions:
@@ -290,4 +297,3 @@ class LongformerSelfAttention(nn.MultiheadAttention):
             context_layer = context_layer.transpose(0, 1)
         outputs = (context_layer, attn_weights) if output_attentions else (context_layer,)
         return outputs
-
