@@ -109,6 +109,8 @@ class diff_CSDI(nn.Module):
         self.output_projection2 = Conv1d_with_init(self.channels, 1, 1)
         nn.init.zeros_(self.output_projection2.weight)
 
+        self.conv2d_output_projection = nn.Conv2d(self.channels, 1, 1, stride=1)
+
         self.cond_obs_s4 = S4Layer(72, lmax=100)
         self.noise_target = S4Layer(72, lmax=100)
 
@@ -139,11 +141,12 @@ class diff_CSDI(nn.Module):
             skip.append(skip_connection)
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
 
-        x = x.reshape(B, self.channels, K * L)
-        x = self.output_projection1(x)  # (B,channel,K*L)
-        x = F.relu(x)
-        x = self.output_projection2(x)  # (B,1,K*L)
-        x = x.reshape(B, K, L)
+        # x = x.reshape(B, self.channels, K * L)
+        # x = self.output_projection1(x)  # (B,channel,K*L)
+        # x = F.relu(x)
+        # x = self.output_projection2(x)  # (B,1,K*L)
+        # x = x.reshape(B, K, L)
+        x = self.conv2d_output_projection(x)
         return x
 
 
@@ -156,6 +159,8 @@ class ResidualBlock(nn.Module):
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
+
+
 
         # self.time_layer = S4Layer(features=channels, lmax=100)
         # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
