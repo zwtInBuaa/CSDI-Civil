@@ -8,6 +8,8 @@ from layers.S4Layer import S4Layer
 from layers.longformer import LongformerTS
 from layers.spatial_conv import SpatialDiffusionConv
 from layers.bilstm import BiLSTM
+from layers.gril import BiGRIL
+from layers.tcn import TemporalConvNet
 
 
 # from pypots.imputation.transformer import EncoderLayer, PositionalEncoding
@@ -16,6 +18,10 @@ from layers.bilstm import BiLSTM
 class Mish(nn.Module):
     def forward(self, x):
         return x * torch.tanh(F.softplus(x))
+
+
+def get_tcn(input_size, hidden_size=[16, 32, 64]):
+    return TemporalConvNet(input_size, hidden_size)
 
 
 def get_bilstm(channels, hidden_size=64, n_layers=1):
@@ -153,10 +159,11 @@ class ResidualBlock(nn.Module):
 
         # self.time_layer = S4Layer(features=channels, lmax=100)
         # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.time_layer = get_bilstm(channels=channels, hidden_size=64)
+        # self.time_layer = get_bilstm(channels=channels, hidden_size=64)
+        self.time_layer = get_tcn(input_size=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
-        self.s4_end_layer = S4Layer(features=2 * channels, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -197,10 +204,10 @@ class ResidualBlock(nn.Module):
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
-        y = self.forward_time(y, base_shape)
+        y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        # y = torch.sigmoid(y_time) * torch.tanh(y_feature)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
         y = self.mid_projection(y)
 
