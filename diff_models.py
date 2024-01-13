@@ -192,7 +192,7 @@ class ResidualBlock(nn.Module):
         c_y = self.conv_cond(cond_info)
         y = y + c_y
 
-        y = self.forward_s4(y, base_shape)
+        y = self.forward_s4(y, (B, channel * 2, K, L))
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
