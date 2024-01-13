@@ -147,6 +147,7 @@ class diff_CSDI(nn.Module):
         # x = self.output_projection2(x)  # (B,1,K*L)
         # x = x.reshape(B, K, L)
         x = self.conv2d_output_projection(x)
+        x = x.reshape(B, K, L)
         return x
 
 
@@ -160,17 +161,15 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-
-
         # self.time_layer = S4Layer(features=channels, lmax=100)
-        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.time_layer = get_bilstm(channels=channels, hidden_size=64)
+        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.time_layer = get_bilstm(channels=channels, hidden_size=64)
         # self.time_layer = get_tcn(input_size=channels)
 
         # self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=9)
 
-        # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.feature_layer = get_bilstm(channels=channels, hidden_size=64)
+        self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.feature_layer = get_bilstm(channels=channels, hidden_size=64)
 
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
