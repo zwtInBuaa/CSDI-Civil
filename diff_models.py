@@ -5,6 +5,7 @@ import math
 import copy
 from layers.S4Layer import S4Layer
 
+
 # from pypots.imputation.transformer import EncoderLayer, PositionalEncoding
 
 
@@ -137,6 +138,7 @@ class ResidualBlock(nn.Module):
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
+        self.s4_end_layer = S4Layer(features=2 * channels, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -157,7 +159,12 @@ class ResidualBlock(nn.Module):
         return y
 
     def forward_s4(self, y, base_shape):
+        B, channel, K, L = base_shape
+        if L == 1:
+            return y
+        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
         y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
     def forward(self, x, cond_info, diffusion_emb):
@@ -176,16 +183,16 @@ class ResidualBlock(nn.Module):
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
-        y_feature = self.forward_feature(self.forward_time(y, base_shape), base_shape)
+        y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
-        y_time = self.forward_time(self.forward_feature(y, base_shape), base_shape)  # (B,channel,K*L)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
         y = self.mid_projection(y)
         c_y = self.conv_cond(cond_info)
         y = y + c_y
 
-        # y = self.forward_s4(y, base_shape)
+        y = self.forward_s4(y, base_shape)
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
