@@ -88,6 +88,7 @@ class CSDI_base(nn.Module):
         feature_embed = self.embed_layer(
             torch.arange(self.target_dim).to(self.device)
         )  # (K,emb)
+        print(feature_embed.shape)
         feature_embed = feature_embed.unsqueeze(0).expand(B, -1, -1)
 
         side_mask = cond_mask  # (B,K,L)
