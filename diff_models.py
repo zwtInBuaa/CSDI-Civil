@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import math
 import copy
 from layers.S4Layer import S4Layer
+from layers.bilstm import BiLSTM
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -11,6 +12,10 @@ def get_torch_trans(heads=8, layers=1, channels=64):
         d_model=channels, nhead=heads, dim_feedforward=64, activation="gelu"
     )
     return nn.TransformerEncoder(encoder_layer, num_layers=layers)
+
+
+def get_bilstm(channels, hidden_size=64, n_layers=1):
+    return BiLSTM(input_size=channels, hidden_size=hidden_size, num_layers=n_layers)
 
 
 def Conv1d_with_init(in_channels, out_channels, kernel_size):
@@ -105,6 +110,7 @@ class ResidualBlock(nn.Module):
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
+        self.cond_layer = get_bilstm(channels * 2, 64)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
@@ -158,6 +164,7 @@ class ResidualBlock(nn.Module):
         cond_info = cond_info.reshape(B, cond_dim, K * L)
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         # cond_info = self.s4(cond_info)
+        cond_info = self.cond_layer(cond_info)
         y = y + cond_info
 
         # y = self.forward_s4(y, base_shape)
