@@ -180,7 +180,7 @@ class ResidualBlock(nn.Module):
         # self.feature_layer = get_bilstm(channels=channels, hidden_size=64)
 
         self.s4_init_layer = S4Layer(features=2 * channels, lmax=100)
-        self.time_trans = get_torch_trans(heads=8, layers=1, channels=channels, hidden_size=channels)
+        self.time_trans = get_torch_trans(heads=8, layers=1, channels=2 * channels, hidden_size=channels)
         self.s4_end_layer = S4Layer(features=2 * channels, lmax=100)
 
     def forward(self, x, cond_obs, cond_info, diffusion_emb):
