@@ -109,7 +109,7 @@ class diff_CSDI(nn.Module):
         B, C, L = x.shape
         x = F.relu(x)
 
-        print("y in base", x.shape)
+        # print("y in base", x.shape)
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
 
@@ -163,7 +163,9 @@ class ResidualBlock(nn.Module):
         print("y in RES", y.shape)
 
         y = self.conv_layer(y)
+        print("y after conv_layer", y.shape)
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        print("y after s4_init_layer", y.shape)
 
         # cond = torch.cat([cond_obs, cond_mask, time_emb, feature_emb], dim=1)
         cond = torch.cat([cond_obs, cond_mask], dim=1)
