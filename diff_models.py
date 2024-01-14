@@ -182,7 +182,7 @@ class ResidualBlock(nn.Module):
 
         residual, skip = torch.chunk(y, 2, dim=1)
 
-        x = x.reshape(base_shape)
-        residual = residual.reshape(base_shape)
-        skip = skip.reshape(base_shape)
+        # x = x.reshape(base_shape)
+        # residual = residual.reshape(base_shape)
+        # skip = skip.reshape(base_shape)
         return (x + residual) / math.sqrt(2.0), skip
