@@ -166,6 +166,8 @@ class ResidualBlock(nn.Module):
         # cond = torch.cat([cond_obs, cond_mask, time_emb, feature_emb], dim=1)
         cond = torch.cat([cond_obs, cond_mask], dim=1)
         cond = self.cond_conv(cond)
+        print(y, y.shape)
+        print(cond, cond.shape)
 
         y = y + cond
         y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
