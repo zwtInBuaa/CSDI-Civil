@@ -193,7 +193,7 @@ class ResidualBlock(nn.Module):
 
         y = self.conv_layer(y)
         # print("y after conv_layer", y.shape)
-        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        # y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         # print("y after s4_init_layer", y.shape)
 
         y = self.time_trans(y.permute(2, 0, 1)).permute(1, 2, 0)
