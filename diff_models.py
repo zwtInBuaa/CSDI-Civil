@@ -158,6 +158,7 @@ class ResidualBlock(nn.Module):
         y = self.forward_cond(y, base_shape)
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
+        
         y_time = self.forward_time(y, base_shape)
         # y_time = self.forward_time(y, base_shape)
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
