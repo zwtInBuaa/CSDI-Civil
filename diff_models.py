@@ -202,10 +202,10 @@ class ResidualBlock(nn.Module):
         cond = torch.cat([cond_obs, cond_mask], dim=1)
         cond = self.cond_conv(cond)
 
-        feature_time_emb = torch.cat([time_emb, feature_emb], dim=1)
-        feature_time_emb = self.feature_time_conv(feature_time_emb)
+        # feature_time_emb = torch.cat([time_emb, feature_emb], dim=1)
+        # feature_time_emb = self.feature_time_conv(feature_time_emb)
 
-        y = y + cond + feature_time_emb
+        y = y + cond
         y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L))
