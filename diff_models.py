@@ -4,8 +4,6 @@ import torch.nn.functional as F
 import math
 import copy
 from layers.S4Layer import S4Layer
-from layers.bilstm import BiLSTM
-from layers.Conv_Blocks import Inception_Block_V1
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -13,10 +11,6 @@ def get_torch_trans(heads=8, layers=1, channels=64):
         d_model=channels, nhead=heads, dim_feedforward=64, activation="gelu"
     )
     return nn.TransformerEncoder(encoder_layer, num_layers=layers)
-
-
-def get_bilstm(channels, hidden_size=64, n_layers=1):
-    return BiLSTM(input_size=channels, hidden_size=hidden_size, num_layers=n_layers)
 
 
 def Conv1d_with_init(in_channels, out_channels, kernel_size):
@@ -109,16 +103,15 @@ class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
+
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
-        self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
-        self.cond_layer = get_bilstm(channels, 64)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        # self.time_layer = S4Layer(features=channels, lmax=100)
+        self.s4_init_layer = S4Layer(features=channels, lmax=100)
+
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
@@ -138,15 +131,6 @@ class ResidualBlock(nn.Module):
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
-    def forward_cond(self, y, base_shape):
-        B, channel, K, L = base_shape
-        if L == 1:
-            return y
-        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y = self.cond_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
-        return y
-
     def forward(self, x, cond_info, diffusion_emb):
         B, channel, K, L = x.shape
         base_shape = x.shape
@@ -156,11 +140,8 @@ class ResidualBlock(nn.Module):
         y = x + diffusion_emb
 
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        # y = self.forward_cond(y, base_shape)
 
-        # y = self.mid_projection(y)  # (B,2*channel,K*L)
         y_time = self.forward_time(y, base_shape)
-        # y_time = self.forward_time(y, base_shape)
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
@@ -169,17 +150,13 @@ class ResidualBlock(nn.Module):
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
-        # cond_info = self.s4(cond_info)
         y = y + cond_info
-
-        # y = self.forward_s4(y, base_shape)
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
         y = self.output_projection(y)
 
         residual, skip = torch.chunk(y, 2, dim=1)
-
         x = x.reshape(base_shape)
         residual = residual.reshape(base_shape)
         skip = skip.reshape(base_shape)

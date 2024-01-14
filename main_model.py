@@ -17,7 +17,7 @@ class CSDI_base(nn.Module):
 
         self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim
         if self.is_unconditional == False:
-            self.emb_total_dim += 2  # for conditional mask
+            self.emb_total_dim += 2  # for conditional mask and observed data
         self.embed_layer = nn.Embedding(
             num_embeddings=self.target_dim, embedding_dim=self.emb_feature_dim
         )
