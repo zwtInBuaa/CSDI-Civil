@@ -35,34 +35,10 @@ def get_torch_trans(heads=8, layers=1, channels=64, hidden_size=64):
     return nn.TransformerEncoder(encoder_layer, num_layers=layers)
 
 
-def get_longformerTS(heads=8, layers=1, channels=64, hidden_size=64, attention_window=27, attention_dilation=1,
-                     attention_mode="sliding_chunks"):
-    encoder_layer = LongformerTS(d_model=channels, nhead=heads, dim_feedforward=hidden_size, activation="gelu",
-                                 attention_window=attention_window, attention_dilation=attention_dilation,
-                                 attention_mode=attention_mode)
-    return nn.TransformerEncoder(encoder_layer, num_layers=layers)
-
-
 def Conv1d_with_init(in_channels, out_channels, kernel_size):
     layer = nn.Conv1d(in_channels, out_channels, kernel_size)
     nn.init.kaiming_normal_(layer.weight)
     return layer
-
-
-class LinearNorm(nn.Module):
-    """LinearNorm Projection"""
-
-    def __init__(self, in_features, out_features, bias=False):
-        super(LinearNorm, self).__init__()
-        self.linear = nn.Linear(in_features, out_features, bias)
-
-        nn.init.xavier_uniform_(self.linear.weight)
-        if bias:
-            nn.init.constant_(self.linear.bias, 0.0)
-
-    def forward(self, x):
-        x = self.linear(x)
-        return x
 
 
 class DiffusionEmbedding(nn.Module):
@@ -95,7 +71,7 @@ class DiffusionEmbedding(nn.Module):
 
 
 class diff_CSDI(nn.Module):
-    def __init__(self, config, inputdim=2):
+    def __init__(self, config, in_dim=72):
         super().__init__()
         self.channels = config["channels"]
 
@@ -104,9 +80,9 @@ class diff_CSDI(nn.Module):
             embedding_dim=config["diffusion_embedding_dim"],
         )
 
-        self.input_projection = Conv1d_with_init(inputdim, self.channels, 1)
+        self.input_projection = Conv1d_with_init(in_dim, self.channels, 1)
         self.output_projection1 = Conv1d_with_init(self.channels, self.channels, 1)
-        self.output_projection2 = Conv1d_with_init(self.channels, 1, 1)
+        self.output_projection2 = Conv1d_with_init(self.channels, in_dim, 1)
         nn.init.zeros_(self.output_projection2.weight)
 
         # self.conv2d_output_projection = nn.Conv2d(self.channels, 1, 1, stride=1)
@@ -127,81 +103,24 @@ class diff_CSDI(nn.Module):
         )
 
     def forward(self, x, cond_info, diffusion_step):
-        B, inputdim, K, L = x.shape
-        x = x.reshape(B, inputdim, K * L)
+        x, cond_obs = x  # (B,K,L),(B,K,L)
+
         x = self.input_projection(x)
+        B, C, L = x.shape
         x = F.relu(x)
-        x = x.reshape(B, self.channels, K, L)
 
         diffusion_emb = self.diffusion_embedding(diffusion_step)
 
         skip = []
         for layer in self.residual_layers:
-            x, skip_connection = layer(x, cond_info, diffusion_emb)
+            x, skip_connection = layer(x, cond_obs, cond_info, diffusion_emb)
             skip.append(skip_connection)
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
 
-        x = x.reshape(B, self.channels, K * L)
-        x = self.output_projection1(x)  # (B,channel,K*L)
+        x = self.output_projection1(x)  # (B,channel,L)
         x = F.relu(x)
-        x = self.output_projection2(x)  # (B,1,K*L)
-        x = x.reshape(B, K, L)
-        # x = self.conv2d_output_projection(x)
-        # x = x.reshape(B, K, L)
-        return x
+        x = self.output_projection2(x)  # (B,K,L)
 
-
-class SiLU(nn.Module):
-    def forward(self, x):
-        return x * torch.sigmoid(x)
-
-
-class Conv1dResLayer(nn.Module):
-    """Mimicking the ResNet bottleneck building blcok (He et.al. 2015)."""
-
-    def __init__(
-            self,
-            Cin,
-            Cmid,
-            L):
-        super().__init__()
-        self.norm1 = nn.LayerNorm([Cin, L], eps=1e-5)
-        self.conv1 = nn.Conv1d(Cin, Cmid, kernel_size=3, padding=1, bias=True)
-        self.act1 = SiLU()
-        self.norm2 = nn.LayerNorm([Cin, L], eps=1e-5)
-        self.conv2 = nn.Conv1d(Cmid, Cmid, kernel_size=5, padding=2, bias=True)
-        self.act2 = SiLU()
-        self.conv3 = nn.Conv1d(Cmid, Cin, kernel_size=3, padding=1, bias=True)
-
-    def forward(self, x):
-        """x (X,C,L)"""
-        y = self.norm1(x)
-        y = self.conv1(y)
-        y = self.act1(y)
-        y = self.norm2(y)
-        y = self.conv2(y)
-        y = self.act2(y)
-        y = self.conv3(y)
-        y = (y + x) / 1.414213
-        return y
-
-
-class Conv1dBlock(nn.Module):
-    """Mimicking the ResNet bottleneck building blcok (He et.al. 2015)."""
-
-    def __init__(
-            self,
-            Cin,
-            Cmid,
-            L,
-            num_blocks=2):
-        super().__init__()
-        net = nn.ModuleList([Conv1dResLayer(Cin, Cmid, L) for _ in range(num_blocks)])
-        self.f = nn.Sequential(*net)
-
-    def forward(self, x):
-        """x (X,C,L)"""
-        x = self.f(x)
         return x
 
 
@@ -211,87 +130,46 @@ class ResidualBlock(nn.Module):
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.diffusion_conv = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
-        self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
+        self.conv_layer = Conv1d_with_init(channels, 2 * channels, kernel_size=3)
+        self.cond_conv = Conv1d_with_init(72 * 2 + 128 + 16, 2 * channels, 1)
+
+        # self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
+        # self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
         # self.time_layer = S4Layer(features=channels, lmax=100)
         # self.time_layer = Conv1dBlock(channels, channels, L=100, num_blocks=3)
 
-        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.time_layer = get_bilstm(channels=channels, hidden_size=64)
         # self.time_layer = get_tcn(input_size=channels)
 
         # self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=9)
 
-        self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.feature_layer = get_bilstm(channels=channels, hidden_size=64)
 
-        self.s4_init_layer = S4Layer(features=channels, lmax=100)
+        self.s4_init_layer = S4Layer(features=2 * channels, lmax=100)
         self.s4_end_layer = S4Layer(features=2 * channels, lmax=100)
 
-    def forward_time(self, y, base_shape):
-        B, channel, K, L = base_shape
-        if L == 1:
-            return y
-        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
-        return y
-
-    # def forward_time(self, y, base_shape):
-    #     B, C, K, L = base_shape
-    #     y = y.reshape(B, C, K, L).permute(0, 2, 1, 3).reshape(B * K, C, L)  # (B*K,C,L)
-    #     y = self.time_layer(y)  # (B*K,C,L)
-    #     y = y.reshape(B, K, C, L).permute(0, 2, 1, 3)  # (B,C,K,L)
-    #     return y
-
-    def forward_feature(self, y, base_shape):
-        B, channel, K, L = base_shape
-        if K == 1:
-            return y
-        y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
-        return y
-
-    def forward_s4(self, y, base_shape):
-        B, channel, K, L = base_shape
-        if L == 1:
-            return y
-        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
-        return y
-
-    def forward(self, x, cond_info, diffusion_emb):
-        B, channel, K, L = x.shape
+    def forward(self, x, cond_obs, cond_info, diffusion_emb):
+        B, C, L = x.shape
         base_shape = x.shape
-        x = x.reshape(B, channel, K * L)
+        time_emb, feature_emb, cond_mask = cond_info  # (B,time_emb,L),(B,feature_emb,L),(B,K,L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y_all = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.conv_layer(y)
+        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
-        # y = self.mid_projection(y)  # (B,2*channel,K*L)
+        cond = torch.cat([cond_obs, cond_mask, time_emb, feature_emb], dim=1)
+        cond = self.cond_conv(cond)
 
-        # y_time = self.forward_time(y, base_shape)
-        y_time = self.forward_time(y, base_shape)
-        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
-        y = torch.sigmoid(y_time) * torch.tanh(y_feature) * torch.tanh(y_all)
+        y = y + cond
+        y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
-        y = self.mid_projection(y)
-
-        _, cond_dim, _, _ = cond_info.shape
-        cond_info = cond_info.reshape(B, cond_dim, K * L)
-        cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
-        y = y + cond_info
-
-        # y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-
-        # y = self.forward_s4(y, (B, channel * 2, K, L))
-        # y = self.forward_time(y, (B, channel * 2, K, L))
+        # y = self.mid_projection(y)  # (B,2*channel,K*L))
 
         gate, filter = torch.chunk(y, 2, dim=1)
         y = torch.sigmoid(gate) * torch.tanh(filter)  # (B,channel,K*L)
