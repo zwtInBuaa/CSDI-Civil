@@ -115,14 +115,6 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.conv = nn.Sequential(
-            Inception_Block_V1(channels, channels,
-                               num_kernels=6),
-            nn.GELU(),
-            Inception_Block_V1(channels, 2 * channels,
-                               num_kernels=6)
-        )
-
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
@@ -172,10 +164,7 @@ class ResidualBlock(nn.Module):
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
-        # y = self.mid_projection(y)
-        y = y.reshape(B, channel, K, L)
-        y = self.conv(y)
-        y = y.reshape(B, 2 * channel, K, L)
+        y = self.mid_projection(y)
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
