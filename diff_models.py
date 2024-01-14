@@ -109,6 +109,8 @@ class diff_CSDI(nn.Module):
         B, C, L = x.shape
         x = F.relu(x)
 
+        print("y in base", x.shape)
+
         diffusion_emb = self.diffusion_embedding(diffusion_step)
 
         skip = []
@@ -154,11 +156,11 @@ class ResidualBlock(nn.Module):
 
     def forward(self, x, cond_obs, cond_info, diffusion_emb):
         B, C, L = x.shape
-        base_shape = x.shape
         time_emb, feature_emb, cond_mask = cond_info  # (B,time_emb,L),(B,feature_emb,L),(B,K,L)
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
+        print("y in RES", y.shape)
 
         y = self.conv_layer(y)
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
@@ -166,8 +168,6 @@ class ResidualBlock(nn.Module):
         # cond = torch.cat([cond_obs, cond_mask, time_emb, feature_emb], dim=1)
         cond = torch.cat([cond_obs, cond_mask], dim=1)
         cond = self.cond_conv(cond)
-        print(y, y.shape)
-        print(cond, cond.shape)
 
         y = y + cond
         y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
