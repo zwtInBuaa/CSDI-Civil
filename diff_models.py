@@ -157,11 +157,11 @@ class ResidualBlock(nn.Module):
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.diffusion_conv = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.conv_layer = Conv(channels, 2 * channels, kernel_size=1)
+        self.conv_layer = Conv1d_with_init(channels, 2 * channels, kernel_size=1)
 
-        self.cond_conv = Conv(72 * 2, 2 * channels, kernel_size=1)
+        self.cond_conv = Conv1d_with_init(72 * 2, 2 * channels, kernel_size=1)
 
-        self.time_conv = Conv(128, 2 * channels, kernel_size=1)
+        self.time_conv = Conv1d_with_init(128, 2 * channels, kernel_size=1)
 
         # self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         # self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
