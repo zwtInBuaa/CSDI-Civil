@@ -5,6 +5,7 @@ import math
 import copy
 from layers.S4Layer import S4Layer
 from layers.bilstm import BiLSTM
+from layers.Conv_Blocks import Inception_Block_V1
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -114,6 +115,14 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
+        self.conv = nn.Sequential(
+            Inception_Block_V1(channels, channels,
+                               num_kernels=6),
+            nn.GELU(),
+            Inception_Block_V1(channels, 2 * channels,
+                               num_kernels=6)
+        )
+
         # self.time_layer = S4Layer(features=channels, lmax=100)
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
@@ -155,7 +164,7 @@ class ResidualBlock(nn.Module):
         y = x + diffusion_emb
 
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = self.forward_cond(y, base_shape)
+        # y = self.forward_cond(y, base_shape)
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
         y_time = self.forward_time(y, base_shape)
@@ -163,7 +172,8 @@ class ResidualBlock(nn.Module):
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
 
-        y = self.mid_projection(y)
+        # y = self.mid_projection(y)
+        y = self.conv(y)
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
