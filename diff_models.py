@@ -132,7 +132,7 @@ class ResidualBlock(nn.Module):
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.diffusion_conv = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.conv_layer = Conv1d_with_init(channels, 2 * channels, kernel_size=3)
+        self.conv_layer = Conv1d_with_init(channels, 2 * channels, 1)
         self.cond_conv = Conv1d_with_init(72 * 2, 2 * channels, 1)
 
         # self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
@@ -160,12 +160,12 @@ class ResidualBlock(nn.Module):
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
-        print("y in RES", y.shape)
+        # print("y in RES", y.shape)
 
         y = self.conv_layer(y)
-        print("y after conv_layer", y.shape)
+        # print("y after conv_layer", y.shape)
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        print("y after s4_init_layer", y.shape)
+        # print("y after s4_init_layer", y.shape)
 
         # cond = torch.cat([cond_obs, cond_mask, time_emb, feature_emb], dim=1)
         cond = torch.cat([cond_obs, cond_mask], dim=1)
