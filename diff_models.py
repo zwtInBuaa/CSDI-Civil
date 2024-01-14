@@ -161,7 +161,7 @@ class ResidualBlock(nn.Module):
 
         self.cond_conv = Conv(72 * 2, 2 * channels, kernel_size=1)
 
-        self.feature_time_conv = Conv(128, 2 * channels, kernel_size=1)
+        self.time_conv = Conv(128, 2 * channels, kernel_size=1)
 
         # self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         # self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
