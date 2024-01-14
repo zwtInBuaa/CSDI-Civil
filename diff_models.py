@@ -161,7 +161,7 @@ class ResidualBlock(nn.Module):
 
         self.cond_conv = Conv(72 * 2, 2 * channels, kernel_size=1)
 
-        self.feature_time_conv = Conv(128 + 16, 2 * channels, kernel_size=1)
+        self.feature_time_conv = Conv(128, 2 * channels, kernel_size=1)
 
         # self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         # self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
@@ -193,10 +193,10 @@ class ResidualBlock(nn.Module):
 
         y = self.conv_layer(y)
         # print("y after conv_layer", y.shape)
-        # y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         # print("y after s4_init_layer", y.shape)
 
-        y = self.time_trans(y.permute(2, 0, 1)).permute(1, 2, 0)
+        # y = self.time_trans(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         # cond = torch.cat([cond_obs, cond_mask, time_emb, feature_emb], dim=1)
         cond = torch.cat([cond_obs, cond_mask], dim=1)
@@ -204,8 +204,9 @@ class ResidualBlock(nn.Module):
 
         # feature_time_emb = torch.cat([time_emb, feature_emb], dim=1)
         # feature_time_emb = self.feature_time_conv(feature_time_emb)
+        time_emb = self.time_conv(time_emb)
 
-        y = y + cond
+        y = y + cond + time_emb
         y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L))
