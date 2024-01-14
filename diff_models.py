@@ -137,8 +137,13 @@ class ResidualBlock(nn.Module):
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
-    def forward_s4(self, y, base_shape):
-        y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+    def forward_cond(self, y, base_shape):
+        B, channel, K, L = base_shape
+        if L == 1:
+            return y
+        y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
+        y = self.cond_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
     def forward(self, x, cond_info, diffusion_emb):
@@ -164,7 +169,7 @@ class ResidualBlock(nn.Module):
         cond_info = cond_info.reshape(B, cond_dim, K * L)
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         # cond_info = self.s4(cond_info)
-        cond_info = self.cond_layer(cond_info)
+        cond_info = self.forward_cond(cond_info, (B, 2 * channel, K, L))
         y = y + cond_info
 
         # y = self.forward_s4(y, base_shape)
