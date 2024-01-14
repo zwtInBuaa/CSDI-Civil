@@ -110,7 +110,7 @@ class ResidualBlock(nn.Module):
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.cond_projection1 = Conv1d_with_init(side_dim, channels, 1)
-        self.cond_layer = get_bilstm(channels * 2, 64)
+        self.cond_layer = get_bilstm(channels, 64)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
@@ -155,6 +155,7 @@ class ResidualBlock(nn.Module):
         y = x + diffusion_emb
 
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.forward_cond(y, base_shape)
 
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
 
@@ -169,7 +170,6 @@ class ResidualBlock(nn.Module):
         cond_info = cond_info.reshape(B, cond_dim, K * L)
         cond_info = self.cond_projection(cond_info)  # (B,2*channel,K*L)
         # cond_info = self.s4(cond_info)
-        cond_info = self.forward_cond(cond_info, (B, 2 * channel, K, L))
         y = y + cond_info
 
         # y = self.forward_s4(y, base_shape)
