@@ -41,31 +41,6 @@ def Conv1d_with_init(in_channels, out_channels, kernel_size):
     return layer
 
 
-class Conv(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, dilation=1):
-        super(Conv, self).__init__()
-        self.padding = dilation * (kernel_size - 1) // 2
-        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size, dilation=dilation, padding=self.padding)
-        self.conv = nn.utils.weight_norm(self.conv)
-        nn.init.kaiming_normal_(self.conv.weight)
-
-    def forward(self, x):
-        out = self.conv(x)
-        return out
-
-
-class ZeroConv1d(nn.Module):
-    def __init__(self, in_channel, out_channel):
-        super(ZeroConv1d, self).__init__()
-        self.conv = nn.Conv1d(in_channel, out_channel, kernel_size=1, padding=0)
-        self.conv.weight.data.zero_()
-        self.conv.bias.data.zero_()
-
-    def forward(self, x):
-        out = self.conv(x)
-        return out
-
-
 class DiffusionEmbedding(nn.Module):
     def __init__(self, num_steps, embedding_dim=128, projection_dim=None):
         super().__init__()
@@ -157,11 +132,8 @@ class ResidualBlock(nn.Module):
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.diffusion_conv = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.conv_layer = Conv1d_with_init(channels, 2 * channels, kernel_size=1)
-
-        self.cond_conv = Conv1d_with_init(72 * 2, 2 * channels, kernel_size=1)
-
-        self.time_conv = Conv1d_with_init(128, 2 * channels, kernel_size=1)
+        self.conv_layer = Conv1d_with_init(channels, 2 * channels, 1)
+        self.cond_conv = Conv1d_with_init(72 * 2, 2 * channels, 1)
 
         # self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         # self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
@@ -180,7 +152,6 @@ class ResidualBlock(nn.Module):
         # self.feature_layer = get_bilstm(channels=channels, hidden_size=64)
 
         self.s4_init_layer = S4Layer(features=2 * channels, lmax=100)
-        self.time_trans = get_torch_trans(heads=8, layers=1, channels=2 * channels, hidden_size=channels)
         self.s4_end_layer = S4Layer(features=2 * channels, lmax=100)
 
     def forward(self, x, cond_obs, cond_info, diffusion_emb):
@@ -196,15 +167,9 @@ class ResidualBlock(nn.Module):
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
         # print("y after s4_init_layer", y.shape)
 
-        y = self.time_trans(y.permute(2, 0, 1)).permute(1, 2, 0)
-
         # cond = torch.cat([cond_obs, cond_mask, time_emb, feature_emb], dim=1)
         cond = torch.cat([cond_obs, cond_mask], dim=1)
         cond = self.cond_conv(cond)
-
-        # feature_time_emb = torch.cat([time_emb, feature_emb], dim=1)
-        # feature_time_emb = self.feature_time_conv(feature_time_emb)
-        # time_emb = self.time_conv(time_emb)
 
         y = y + cond
         y = self.s4_end_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
