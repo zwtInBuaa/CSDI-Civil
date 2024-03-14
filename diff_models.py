@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import copy
+from layers.S4Layer import S4Layer
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -114,8 +115,9 @@ class ResidualBlock(nn.Module):
 
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
-        self.w_tf = nn.Linear(2 * channels, channels)
+        # self.w_tf = nn.Linear(2 * channels, channels)
 
         # self.transformer_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
 
@@ -174,6 +176,8 @@ class ResidualBlock(nn.Module):
 
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
+
+        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         O_t_time = self.forward_time(y, base_shape)
         O_t_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
