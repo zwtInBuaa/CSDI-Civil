@@ -113,6 +113,9 @@ class ResidualBlock(nn.Module):
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
+        # shape of y : (B,C,L)
+        # y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
         if L == 1:
@@ -150,6 +153,9 @@ class ResidualBlock(nn.Module):
         y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         # y = self.mid_projection(y)  # (B,2*channel,K*L)
+
+        # y = self.forward_time(y, base_shape)
+        # y = self.forward_feature(y, base_shape)
         y = self.mid_projection(y)
 
         _, cond_dim, _, _ = cond_info.shape
