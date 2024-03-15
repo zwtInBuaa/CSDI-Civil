@@ -61,7 +61,7 @@ class MultiHeadAttention(nn.Module):
         self.w_ks = nn.Linear(d_model, n_head * d_k, bias=False)
         self.w_vs = nn.Linear(d_model, n_head * d_v, bias=False)
 
-        self.attention = ScaledDotProductAttention(d_k**0.5, attn_dropout)
+        self.attention = ScaledDotProductAttention(d_k ** 0.5, attn_dropout)
         self.fc = nn.Linear(n_head * d_v, d_model, bias=False)
 
     def forward(self, q, k, v, attn_mask=None):
@@ -111,22 +111,23 @@ class PositionWiseFeedForward(nn.Module):
 
 class EncoderLayer(nn.Module):
     def __init__(
-        self,
-        d_time,
-        d_feature,
-        d_model,
-        d_inner,
-        n_head,
-        d_k,
-        d_v,
-        dropout=0.1,
-        attn_dropout=0.1,
-        **kwargs
+            self,
+            d_time,
+            d_feature,
+            d_model,
+            d_inner,
+            n_head,
+            d_k,
+            d_v,
+            dropout=0.1,
+            attn_dropout=0.1,
+            diagonal_attention_mask=True,
+            device='cuda'
     ):
         super(EncoderLayer, self).__init__()
 
-        self.diagonal_attention_mask = kwargs["diagonal_attention_mask"]
-        self.device = kwargs["device"]
+        self.diagonal_attention_mask = diagonal_attention_mask
+        self.device = device
         self.d_time = d_time
         self.d_feature = d_feature
 
