@@ -130,8 +130,8 @@ class ResidualBlock(nn.Module):
             attn_dropout=0,
         )
         self.feature_layer = EncoderLayer(
-            d_time=32,
-            d_feature=72,
+            d_time=72,
+            d_feature=32,
             d_model=channels,
             d_inner=64,
             n_head=nheads,
