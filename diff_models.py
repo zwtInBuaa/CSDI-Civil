@@ -119,8 +119,8 @@ class ResidualBlock(nn.Module):
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
         self.attention_layer = EncoderLayer(
-            d_time=8 * 72,
-            d_feature=32,
+            d_time=32,
+            d_feature=72,
             d_model=channels,
             d_inner=64,
             n_head=nheads,
