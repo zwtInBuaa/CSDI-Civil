@@ -118,7 +118,7 @@ class ResidualBlock(nn.Module):
         # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
-        self.attention_layer = EncoderLayer(
+        self.encoder_layer = EncoderLayer(
             d_time=32,
             d_feature=72,
             d_model=channels,
@@ -129,6 +129,8 @@ class ResidualBlock(nn.Module):
             dropout=0.1,
             attn_dropout=0,
         )
+
+        self.transformer_layer = nn.TransformerEncoder(encoder_layer=self.encoder_layer, num_layers=1)
         # self.feature_layer = EncoderLayer(
         #     d_time=32,
         #     actual_d_feature=72,
@@ -198,7 +200,7 @@ class ResidualBlock(nn.Module):
         if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y, attens = self.attention_layer(y.permute(0, 2, 1))
+        y = self.transformer_layer(y.permute(0, 2, 1))
         y = y.permute(0, 2, 1)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
