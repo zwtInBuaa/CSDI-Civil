@@ -197,9 +197,9 @@ class ResidualBlock(nn.Module):
         B, channel, K, L = base_shape
         if K == 1:
             return y
-        y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        y = self.attention_layer(y.permute(2, 0, 1))
-        y = y.permute(1, 2, 0)
+        y = y.reshape(B, channel, K, L).reshape(B, channel, K * L).permute(0, 2, 1)
+        y, attens = self.attention_layer(y.permute(2, 0, 1))
+        y = y.permute(0, 2, 1)
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
