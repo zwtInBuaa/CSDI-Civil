@@ -114,32 +114,32 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.s4_init_layer = S4Layer(features=channels, lmax=100)
 
-        self.time_layer = EncoderLayer(
-            d_time=32,
-            d_feature=72,
-            d_model=channels,
-            d_inner=64,
-            n_head=nheads,
-            d_k=64,
-            d_v=64,
-            dropout=0.1,
-            attn_dropout=0,
-        )
-        self.feature_layer = EncoderLayer(
-            d_time=72,
-            d_feature=32,
-            d_model=channels,
-            d_inner=64,
-            n_head=nheads,
-            d_k=64,
-            d_v=64,
-            dropout=0.1,
-            attn_dropout=0,
-        )
+        # self.time_layer = EncoderLayer(
+        #     d_time=32,
+        #     d_feature=72,
+        #     d_model=channels,
+        #     d_inner=64,
+        #     n_head=nheads,
+        #     d_k=64,
+        #     d_v=64,
+        #     dropout=0.1,
+        #     attn_dropout=0,
+        # )
+        # self.feature_layer = EncoderLayer(
+        #     d_time=72,
+        #     d_feature=32,
+        #     d_model=channels,
+        #     d_inner=64,
+        #     n_head=nheads,
+        #     d_k=64,
+        #     d_v=64,
+        #     dropout=0.1,
+        #     attn_dropout=0,
+        # )
 
         # self.feature_layer = EncoderLayer(
         #     d_time=32,
@@ -237,8 +237,8 @@ class ResidualBlock(nn.Module):
 
         y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
-        O_t_time = self.forward_attention_time(y, base_shape)
-        O_t_feature = self.forward_attention_feature(y, base_shape)  # (B,channel,K*L)
+        O_t_time = self.forward_time(y, base_shape)
+        O_t_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         #
         # # y = self.forward_time(y, base_shape)
         # # y = self.forward_feature(y, base_shape)
