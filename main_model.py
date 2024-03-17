@@ -132,13 +132,12 @@ class CSDI_base(nn.Module):
         residual = (noise - predicted) * target_mask
         num_eval = target_mask.sum()
 
-        reconstruction_mask = observed_mask - target_mask
-        reconstruction_residual = (noise - predicted) * reconstruction_mask
-        num_reconstruction_eval = reconstruction_residual.sum()
+        reconstruction_residual = (noise - predicted) * cond_mask
+        num_reconstruction_eval = cond_mask.sum()
 
         # loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
-        loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1) + 0.5 * (
-                reconstruction_residual ** 2).sum() / (
+        loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1) + \
+               0.5 * (reconstruction_residual ** 2).sum() / (
                    num_reconstruction_eval if num_reconstruction_eval > 0 else 1)
         return loss
 
