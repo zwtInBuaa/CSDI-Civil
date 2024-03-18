@@ -116,17 +116,19 @@ class ResidualBlock(nn.Module):
         if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y, attens = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y, attens = self.time_layer(y.permute(0, 2, 1))
+        y = y.permute(0, 2, 1)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
     def forward_feature(self, y, base_shape):
         B, channel, K, L = base_shape
-        if K == 1:
+        if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        y, attens = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
+        y, attens = self.feature_layer(y.permute(0, 2, 1))
+        y = y.permute(0, 2, 1)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
     def forward(self, x, cond_info, diffusion_emb):
