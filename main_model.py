@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from diff_models_init import diff_CSDI_init
 from diff_models import diff_CSDI
 
 
@@ -14,6 +15,7 @@ class CSDI_base(nn.Module):
         self.emb_feature_dim = config["model"]["featureemb"]
         self.is_unconditional = config["model"]["is_unconditional"]
         self.target_strategy = config["model"]["target_strategy"]
+        self.diff_model = config["model"]["diff_models"]
 
         self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim
         if self.is_unconditional == False:
@@ -26,7 +28,10 @@ class CSDI_base(nn.Module):
         config_diff["side_dim"] = self.emb_total_dim
 
         input_dim = 1 if self.is_unconditional == True else 2
-        self.diffmodel = diff_CSDI(config_diff, input_dim)
+        if self.diff_model == 0:
+            self.diffmodel = diff_CSDI_init(config_diff, input_dim)
+        else:
+            self.diff_model = diff_CSDI(config_diff, input_dim)
 
         # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
@@ -137,7 +142,7 @@ class CSDI_base(nn.Module):
 
         # loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
         loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1) + \
-               0.5 * (reconstruction_residual ** 2).sum() / (
+               0.6 * (reconstruction_residual ** 2).sum() / (
                    num_reconstruction_eval if num_reconstruction_eval > 0 else 1)
         return loss
 

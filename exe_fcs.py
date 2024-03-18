@@ -34,6 +34,8 @@ parser.add_argument("--validationindex", type=int, default=0, help="index of mon
 parser.add_argument("--nsample", type=int, default=100)
 parser.add_argument("--unconditional", action="store_true")
 
+parser.add_argument("--diffmodel", type=int, default=0)
+
 args = parser.parse_args()
 print(args)
 
@@ -43,6 +45,7 @@ with open(path, "r") as f:
 
 config["model"]["is_unconditional"] = args.unconditional
 config["model"]["target_strategy"] = args.targetstrategy
+config["model"]["diff_model"] = args.diffmodel
 
 print(json.dumps(config, indent=4))
 
