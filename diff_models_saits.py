@@ -106,9 +106,9 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.time_layer = EncoderLayer(d_time=32, d_feature=72, d_model=channels, d_inner=64, n_head=nheads, d_k=64,
+        self.time_layer = EncoderLayer(d_time=32, d_feature=72, d_model=channels, d_inner=128, n_head=nheads, d_k=64,
                                        d_v=64, dropout=0.1, attn_dropout=0)
-        self.feature_layer = EncoderLayer(d_time=72, d_feature=32, d_model=channels, d_inner=64, n_head=nheads, d_k=64,
+        self.feature_layer = EncoderLayer(d_time=72, d_feature=32, d_model=channels, d_inner=128, n_head=nheads, d_k=64,
                                           d_v=64, dropout=0.1, attn_dropout=0)
 
     def forward_time(self, y, base_shape):
@@ -139,8 +139,9 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y_time = self.forward_time(y, base_shape)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 
         _, cond_dim, _, _ = cond_info.shape
