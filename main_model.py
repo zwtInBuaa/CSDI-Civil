@@ -15,7 +15,7 @@ class CSDI_base(nn.Module):
         self.emb_feature_dim = config["model"]["featureemb"]
         self.is_unconditional = config["model"]["is_unconditional"]
         self.target_strategy = config["model"]["target_strategy"]
-        self.diff_model = config["model"]["diff_models"]
+        self.diff_model = config["model"]["diff_model"]
 
         self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim
         if self.is_unconditional == False:
@@ -31,7 +31,7 @@ class CSDI_base(nn.Module):
         if self.diff_model == 0:
             self.diffmodel = diff_CSDI_init(config_diff, input_dim)
         else:
-            self.diff_model = diff_CSDI(config_diff, input_dim)
+            self.diffmodel = diff_CSDI(config_diff, input_dim)
 
         # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
