@@ -49,7 +49,7 @@ class DiffusionEmbedding(nn.Module):
         return table
 
 
-class diff_CSDI(nn.Module):
+class diff_CSDI_best(nn.Module):
     def __init__(self, config, inputdim=2):
         super().__init__()
         self.channels = config["channels"]
@@ -235,7 +235,7 @@ class ResidualBlock(nn.Module):
 
         # y = self.forward_attention(y, base_shape)
 
-        # y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y = self.s4_init_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
 
         O_t_time = self.forward_time(y, base_shape)
         O_t_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)

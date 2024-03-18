@@ -35,6 +35,7 @@ parser.add_argument("--nsample", type=int, default=100)
 parser.add_argument("--unconditional", action="store_true")
 
 parser.add_argument("--diffmodel", type=int, default=0)
+parser.add_argument("--lossort", type=float, default=0.0)
 
 args = parser.parse_args()
 print(args)
@@ -46,6 +47,7 @@ with open(path, "r") as f:
 config["model"]["is_unconditional"] = args.unconditional
 config["model"]["target_strategy"] = args.targetstrategy
 config["model"]["diff_model"] = args.diffmodel
+config["model"]["loss_ort"] = args.lossort
 
 print(json.dumps(config, indent=4))
 

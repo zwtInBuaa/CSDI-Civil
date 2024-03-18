@@ -2,7 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from diff_models_init import diff_CSDI_init
-from diff_models import diff_CSDI
+from diff_models_best import diff_CSDI_best
+from diff_models_saits import diff_CSDI_saits
 
 
 class CSDI_base(nn.Module):
@@ -16,6 +17,7 @@ class CSDI_base(nn.Module):
         self.is_unconditional = config["model"]["is_unconditional"]
         self.target_strategy = config["model"]["target_strategy"]
         self.diff_model = config["model"]["diff_model"]
+        self.loss_ort = config["model"]["loss_ort"]
 
         self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim
         if self.is_unconditional == False:
@@ -30,8 +32,10 @@ class CSDI_base(nn.Module):
         input_dim = 1 if self.is_unconditional == True else 2
         if self.diff_model == 0:
             self.diffmodel = diff_CSDI_init(config_diff, input_dim)
+        elif self.diff_model == 1:
+            self.diffmodel = diff_CSDI_best(config_diff, input_dim)
         else:
-            self.diffmodel = diff_CSDI(config_diff, input_dim)
+            self.diffmodel = diff_CSDI_saits(config_diff, input_dim)
 
         # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
@@ -141,8 +145,8 @@ class CSDI_base(nn.Module):
         num_reconstruction_eval = cond_mask.sum()
 
         # loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
-        loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1) + \
-               0.6 * (reconstruction_residual ** 2).sum() / (
+        loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1) + self.loss_ort * (
+                    reconstruction_residual ** 2).sum() / (
                    num_reconstruction_eval if num_reconstruction_eval > 0 else 1)
         return loss
 
