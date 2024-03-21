@@ -326,10 +326,8 @@ class CSDI_Physio(CSDI_base):
         gt_mask = gt_mask.permute(0, 2, 1)
         cond_mask = cond_mask.permute(0, 2, 1)
 
-        coeffs = None
-        if self.use_guide:
-            coeffs = batch["coeffs"].to(self.device).float()
-            coeffs = coeffs.permute(0, 2, 1)
+        coeffs = batch["coeffs"].to(self.device).float() if self.use_guide else None
+        coeffs = coeffs.permute(0, 2, 1)
 
         cut_length = torch.zeros(len(observed_data)).long().to(self.device)
         for_pattern_mask = observed_mask
