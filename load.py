@@ -5,14 +5,14 @@ import json
 import yaml
 import os
 
-from main_model import CSDI_PM25
+from main_model import CSDI_Civil
 
 path = './save/great_98 300/model.pth'
 path1 = './save/great_98 300/config.json'
 with open(path1, "r") as f:
     config = json.load(f)
 print(config)
-model = CSDI_PM25(config, 'cuda:0')
+model = CSDI_Civil(config, 'cuda:0')
 
 model.load_state_dict(torch.load(path, map_location=torch.device('cuda:0')))
 
