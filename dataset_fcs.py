@@ -133,7 +133,7 @@ class PM25_Dataset(Dataset):
             "cut_length": self.cut_length[org_index],
         }
         ob_data = self.observed_data[c_month][c_index: c_index + self.eval_length]
-        cond_mask = self.observed_mask[c_month][c_index:c_index + self.eval_length]
+        cond_mask = torch.from_numpy(self.observed_mask[c_month][c_index:c_index + self.eval_length])
         if self.use_guide:
             tmp_data = torch.tensor(ob_data).to(torch.float64)
             itp_data = torch.where(cond_mask == 0, float('nan'), tmp_data).to(torch.float32)
