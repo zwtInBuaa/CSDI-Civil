@@ -8,7 +8,7 @@ import random
 import numpy
 
 from dataset_fcs import get_dataloader
-from main_model import CSDI_PM25
+from main_model import CSDI_Civil
 from utils import train, evaluate
 
 
@@ -60,9 +60,10 @@ with open(foldername + "config.json", "w") as f:
     json.dump(config, f, indent=4)
 
 train_loader, valid_loader, test_loader, scaler, mean_scaler = get_dataloader(
-    config["train"]["batch_size"], device=args.device, validindex=args.validationindex
+    config["train"]["batch_size"], device=args.device, use_guide=config["model"]["use_guide"],
+    validindex=args.validationindex
 )
-model = CSDI_PM25(config, args.device).to(args.device)
+model = CSDI_Civil(config, args.device).to(args.device)
 
 if args.modelfolder == "":
     train(

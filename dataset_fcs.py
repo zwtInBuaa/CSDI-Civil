@@ -3,12 +3,14 @@ from torch.utils.data import DataLoader, Dataset
 import pandas as pd
 import numpy as np
 import torch
+import torchcde
 
 
 class PM25_Dataset(Dataset):
-    def __init__(self, eval_length=32, target_dim=72, mode="train", validindex=0):
+    def __init__(self, eval_length=32, target_dim=72, mode="train", use_guide=False, validindex=0):
         self.eval_length = eval_length
         self.target_dim = target_dim
+        self.use_guide = use_guide  # 是否使用预先插补
 
         path = "./data/ours/our_meanstd.pk"
         with open(path, "rb") as f:
@@ -130,6 +132,16 @@ class PM25_Dataset(Dataset):
             "timepoints": np.arange(self.eval_length),
             "cut_length": self.cut_length[org_index],
         }
+        ob_data = self.observed_data[c_month][c_index: c_index + self.eval_length]
+        cond_mask = self.observed_mask[c_month][c_index:c_index + self.eval_length]
+        if self.use_guide:
+            tmp_data = torch.tensor(ob_data).to(torch.float64)
+            itp_data = torch.where(cond_mask == 0, float('nan'), tmp_data).to(torch.float32)
+            itp_data = torchcde.linear_interpolation_coeffs(
+                itp_data.permute(1, 0).unsqueeze(-1)).squeeze(-1).permute(1, 0)
+            s["coeffs"] = itp_data.numpy()
+        else:
+            s["coeffs"] = ob_data
         # print(s)
 
         return s
@@ -138,16 +150,16 @@ class PM25_Dataset(Dataset):
         return len(self.use_index)
 
 
-def get_dataloader(batch_size, device, validindex=0):
-    dataset = PM25_Dataset(mode="train", validindex=validindex)
+def get_dataloader(batch_size, device, use_guide=False, validindex=0):
+    dataset = PM25_Dataset(mode="train", use_guide=use_guide, validindex=validindex)
     train_loader = DataLoader(
         dataset, batch_size=batch_size, num_workers=1, shuffle=True
     )
-    dataset_test = PM25_Dataset(mode="test", validindex=validindex)
+    dataset_test = PM25_Dataset(mode="test", use_guide=use_guide, validindex=validindex)
     test_loader = DataLoader(
         dataset_test, batch_size=batch_size, num_workers=1, shuffle=False
     )
-    dataset_valid = PM25_Dataset(mode="valid", validindex=validindex)
+    dataset_valid = PM25_Dataset(mode="valid", use_guide=use_guide, validindex=validindex)
     valid_loader = DataLoader(
         dataset_valid, batch_size=batch_size, num_workers=1, shuffle=False
     )
