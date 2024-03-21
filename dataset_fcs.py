@@ -1,5 +1,6 @@
 import pickle
 from torch.utils.data import DataLoader, Dataset
+from utils import get_randmask, get_hist_mask
 import pandas as pd
 import numpy as np
 import torch
@@ -29,9 +30,9 @@ class PM25_Dataset(Dataset):
         self.month_list = month_list
 
         # create data for batch
-        self.observed_data = []  # values (separated into each month)
-        self.observed_mask = []  # masks (separated into each month)
-        self.gt_mask = []  # ground-truth masks (separated into each month)
+        self.observed_data = []  # values (separated into each month),
+        self.observed_mask = []  # masks (separated into each month), 无样本缺失的原始数据的掩码矩阵
+        self.gt_mask = []  # ground-truth masks (separated into each month), 由缺失样本的掩码矩阵
         self.index_month = []  # indicate month
         self.position_in_month = []  # indicate the start position in month (length is the same as index_month)
         self.valid_for_histmask = []  # whether the sample is used for histmask
@@ -116,32 +117,42 @@ class PM25_Dataset(Dataset):
         c_index = self.position_in_month[index]
         hist_month = self.index_month_histmask[index]
         hist_index = self.position_in_month_histmask[index]
+
+        observed_data = self.observed_data[c_month][c_index:c_index + self.eval_length]
+        observed_mask = self.observed_mask[c_month][c_index:c_index + self.eval_length]
+        ob_mask_t = torch.tensor(observed_mask).float()
+        gt_mask = self.gt_mask[c_month][c_index:c_index + self.eval_length]
+        hist_mask = self.observed_mask[hist_month][hist_index:hist_index + self.eval_length]
+        timepoints = np.arange(self.eval_length)
+        cut_length = self.cut_length[org_index]
+
+        # cond_mask是自监督学习掩码矩阵，缺失值为原先缺失的值+训练扣掉的值
+        if self.mode != 'train':
+            cond_mask = torch.tensor(gt_mask).to(torch.float32)
+        else:
+            if self.target_strategy != 'random':
+                cond_mask = get_hist_mask(ob_mask_t, for_pattern_mask=hist_mask)
+            else:
+                cond_mask = get_randmask(ob_mask_t)
+
         s = {
-            "observed_data": self.observed_data[c_month][
-                             c_index: c_index + self.eval_length
-                             ],
-            "observed_mask": self.observed_mask[c_month][
-                             c_index: c_index + self.eval_length
-                             ],
-            "gt_mask": self.gt_mask[c_month][
-                       c_index: c_index + self.eval_length
-                       ],
-            "hist_mask": self.observed_mask[hist_month][
-                         hist_index: hist_index + self.eval_length
-                         ],
-            "timepoints": np.arange(self.eval_length),
-            "cut_length": self.cut_length[org_index],
+            "observed_data": observed_data,
+            "observed_mask": observed_mask,
+            "gt_mask": gt_mask,
+            "hist_mask": hist_mask,
+            "timepoints": timepoints,
+            "cut_length": cut_length,
+            "cond_mask": cond_mask.numpy()
         }
-        ob_data = self.observed_data[c_month][c_index: c_index + self.eval_length]
-        cond_mask = torch.from_numpy(self.observed_mask[c_month][c_index:c_index + self.eval_length])
+
         if self.use_guide:
-            tmp_data = torch.tensor(ob_data).to(torch.float64)
+            tmp_data = torch.tensor(observed_data).to(torch.float64)
             itp_data = torch.where(cond_mask == 0, float('nan'), tmp_data).to(torch.float32)
             itp_data = torchcde.linear_interpolation_coeffs(
                 itp_data.permute(1, 0).unsqueeze(-1)).squeeze(-1).permute(1, 0)
             s["coeffs"] = itp_data.numpy()
         else:
-            s["coeffs"] = ob_data
+            s["coeffs"] = observed_data
         # print(s)
 
         return s

@@ -218,17 +218,19 @@ class CSDI_base(nn.Module):
             gt_mask,
             for_pattern_mask,
             _,
-            coeffs
+            coeffs,
+            cond_mask
         ) = self.process_data(batch)
 
-        if is_train == 0:
-            cond_mask = gt_mask
-        elif self.target_strategy != "random":
-            cond_mask = self.get_hist_mask(
-                observed_mask, for_pattern_mask=for_pattern_mask
-            )
-        else:
-            cond_mask = self.get_randmask(observed_mask)
+        # have done in dataset_fcs.py,same as cond_mask
+        # if is_train == 0:
+        #     cond_mask = gt_mask
+        # elif self.target_strategy != "random":
+        #     cond_mask = self.get_hist_mask(
+        #         observed_mask, for_pattern_mask=for_pattern_mask
+        #     )
+        # else:
+        #     cond_mask = self.get_randmask(observed_mask)
 
         side_info = self.get_side_info(observed_tp, cond_mask)
 
@@ -249,6 +251,7 @@ class CSDI_base(nn.Module):
             _,
             cut_length,
             coeffs,
+            _,
         ) = self.process_data(batch)
 
         with torch.no_grad():
@@ -282,11 +285,13 @@ class CSDI_Civil(CSDI_base):
         gt_mask = batch["gt_mask"].to(self.device).float()
         cut_length = batch["cut_length"].to(self.device).long()
         for_pattern_mask = batch["hist_mask"].to(self.device).float()
+        cond_mask = batch["cond_mask"].to(self.device).float()
 
         observed_data = observed_data.permute(0, 2, 1)
         observed_mask = observed_mask.permute(0, 2, 1)
         gt_mask = gt_mask.permute(0, 2, 1)
         for_pattern_mask = for_pattern_mask.permute(0, 2, 1)
+        cond_mask = cond_mask.permute(0, 2, 1)
 
         coeffs = None
         if self.use_guide:
@@ -301,6 +306,7 @@ class CSDI_Civil(CSDI_base):
             for_pattern_mask,
             cut_length,
             coeffs,
+            cond_mask
         )
 
 
@@ -313,10 +319,12 @@ class CSDI_Physio(CSDI_base):
         observed_mask = batch["observed_mask"].to(self.device).float()
         observed_tp = batch["timepoints"].to(self.device).float()
         gt_mask = batch["gt_mask"].to(self.device).float()
+        cond_mask = batch["cond_mask"].to(self.device).float()
 
         observed_data = observed_data.permute(0, 2, 1)
         observed_mask = observed_mask.permute(0, 2, 1)
         gt_mask = gt_mask.permute(0, 2, 1)
+        cond_mask = cond_mask.permute(0, 2, 1)
 
         coeffs = None
         if self.use_guide:
@@ -334,4 +342,5 @@ class CSDI_Physio(CSDI_base):
             for_pattern_mask,
             cut_length,
             coeffs,
+            cond_mask
         )
