@@ -134,7 +134,7 @@ class PM25_Dataset(Dataset):
             cond_mask = torch.tensor(gt_mask).to(torch.float32)
         else:
             if self.target_strategy != 'random':
-                cond_mask = get_hist_mask(ob_mask_t, for_pattern_mask=hist_mask)
+                cond_mask = get_hist_mask(target_strategy,ob_mask_t, for_pattern_mask=hist_mask)
             else:
                 cond_mask = get_randmask(ob_mask_t)
 

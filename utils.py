@@ -5,7 +5,7 @@ from tqdm import tqdm
 import pickle
 
 
-def get_randmask(self, observed_mask):
+def get_randmask(observed_mask):
     rand_for_mask = torch.rand_like(observed_mask) * observed_mask
     rand_for_mask = rand_for_mask.reshape(len(rand_for_mask), -1)
     for i in range(len(observed_mask)):
@@ -17,16 +17,16 @@ def get_randmask(self, observed_mask):
     return cond_mask
 
 
-def get_hist_mask(self, observed_mask, for_pattern_mask=None):
+def get_hist_mask(target_strategy, observed_mask, for_pattern_mask=None):
     if for_pattern_mask is None:
         for_pattern_mask = observed_mask
-    if self.target_strategy == "mix":
-        rand_mask = self.get_randmask(observed_mask)
+    if target_strategy == "mix":
+        rand_mask = get_randmask(observed_mask)
 
     cond_mask = observed_mask.clone()
     for i in range(len(cond_mask)):
         mask_choice = np.random.rand()
-        if self.target_strategy == "mix" and mask_choice > 0.5:
+        if target_strategy == "mix" and mask_choice > 0.5:
             cond_mask[i] = rand_mask[i]
         else:  # draw another sample for histmask (i-1 corresponds to another sample)
             cond_mask[i] = cond_mask[i] * for_pattern_mask[i - 1]
