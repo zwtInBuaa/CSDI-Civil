@@ -12,6 +12,7 @@ from main_model import CSDI_Civil
 from utils import train, evaluate
 
 
+# 固定随机数种子，可以复现结果
 def seed_torch(seed=1000):  # 1029,1030
     random.seed(seed)
     # os.environ['PYTHONHASHSEED'] = str(seed)  # 为了禁止hash随机化，使得实验可复现
@@ -60,7 +61,10 @@ with open(foldername + "config.json", "w") as f:
     json.dump(config, f, indent=4)
 
 train_loader, valid_loader, test_loader, scaler, mean_scaler = get_dataloader(
-    config["train"]["batch_size"], device=args.device, use_guide=config["model"]["use_guide"],
+    config["train"]["batch_size"],
+    device=args.device,
+    use_guide=config["model"]["use_guide"],
+    target_strategy=config["model"]["target_strategy"],
     validindex=args.validationindex
 )
 model = CSDI_Civil(config, args.device).to(args.device)

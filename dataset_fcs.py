@@ -8,9 +8,12 @@ import torchcde
 
 
 class PM25_Dataset(Dataset):
-    def __init__(self, eval_length=32, target_dim=72, mode="train", use_guide=False, validindex=0):
+    def __init__(self, eval_length=32, target_dim=72, mode="train", target_strategy="mix", use_guide=False,
+                 validindex=0):
         self.eval_length = eval_length
         self.target_dim = target_dim
+        self.mode = mode
+        self.target_strategy = target_strategy
         self.use_guide = use_guide  # 是否使用预先插补
 
         path = "./data/ours/our_meanstd.pk"
@@ -161,19 +164,19 @@ class PM25_Dataset(Dataset):
         return len(self.use_index)
 
 
-def get_dataloader(batch_size, device, use_guide=False, validindex=0):
-    dataset = PM25_Dataset(mode="train", use_guide=use_guide, validindex=validindex)
+def get_dataloader(batch_size, device, target_strategy='mix', use_guide=False, validindex=0):
+    dataset = PM25_Dataset(mode="train", use_guide=use_guide, target_strategy=target_strategy, validindex=validindex)
     train_loader = DataLoader(
         dataset, batch_size=batch_size, num_workers=1, shuffle=True
     )
-    dataset_test = PM25_Dataset(mode="test", use_guide=use_guide, validindex=validindex)
-    test_loader = DataLoader(
-        dataset_test, batch_size=batch_size, num_workers=1, shuffle=False
-    )
-    dataset_valid = PM25_Dataset(mode="valid", use_guide=use_guide, validindex=validindex)
-    valid_loader = DataLoader(
-        dataset_valid, batch_size=batch_size, num_workers=1, shuffle=False
-    )
+
+    dataset_test = PM25_Dataset(mode="test", use_guide=use_guide, target_strategy=target_strategy,
+                                validindex=validindex)
+    test_loader = DataLoader(dataset_test, batch_size=batch_size, num_workers=1, shuffle=False)
+
+    dataset_valid = PM25_Dataset(mode="valid", use_guide=use_guide, target_strategy=target_strategy,
+                                 validindex=validindex)
+    valid_loader = DataLoader(dataset_valid, batch_size=batch_size, num_workers=1, shuffle=False)
 
     scaler = torch.Tensor(dataset.train_std).to(device).float()
     mean_scaler = torch.Tensor(dataset.train_mean).to(device).float()
