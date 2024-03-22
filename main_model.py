@@ -117,7 +117,7 @@ class CSDI_base(nn.Module):
         loss_sum = 0
         for t in range(self.num_steps):  # calculate loss for all t
             loss = self.calc_loss(
-                observed_data, cond_mask, observed_mask, side_info, is_train, set_t=t
+                observed_data, cond_mask, observed_mask, side_info, itp_info, is_train, set_t=t
             )
             loss_sum += loss.detach()
         return loss_sum / self.num_steps
