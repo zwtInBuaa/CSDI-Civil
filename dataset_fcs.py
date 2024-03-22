@@ -131,7 +131,7 @@ class PM25_Dataset(Dataset):
 
         # cond_mask是自监督学习掩码矩阵，缺失值为原先缺失的值+训练扣掉的值
         if self.mode != 'train':
-            cond_mask = torch.tensor(gt_mask).to(torch.float32)
+            cond_mask = torch.tensor(gt_mask).float()
         else:
             if self.target_strategy != 'random':
                 cond_mask = get_hist_mask(self.target_strategy, ob_mask_t, for_pattern_mask=hist_mask)

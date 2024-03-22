@@ -134,9 +134,13 @@ class CSDI_base(nn.Module):
         noise = torch.randn_like(observed_data)
         noisy_data = (current_alpha ** 0.5) * observed_data + (1.0 - current_alpha) ** 0.5 * noise
 
+        if not self.use_guide:
+            itp_info = cond_mask * observed_data
         total_input = self.set_input_to_diffmodel(noisy_data, observed_data, cond_mask, itp_info)
-        cond_obs = (cond_mask * observed_data).unsqueeze(1)
-        side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
+
+        if not self.is_unconditional:
+            cond_obs = (cond_mask * observed_data).unsqueeze(1)
+            side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
 
         predicted = self.diffmodel(total_input, side_info, t)  # (B,K,L)
 
@@ -147,14 +151,15 @@ class CSDI_base(nn.Module):
         reconstruction_residual = (noise - predicted) * cond_mask
         num_reconstruction_eval = cond_mask.sum()
 
+        MIT_l = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
+        ORT_l = (reconstruction_residual ** 2).sum() / (num_reconstruction_eval if num_reconstruction_eval > 0 else 1)
+
         # loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
-        loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1) + self.loss_ort * (
-                reconstruction_residual ** 2).sum() / (
-                   num_reconstruction_eval if num_reconstruction_eval > 0 else 1)
+        loss = MIT_l + self.loss_ort * ORT_l
         return loss
 
     def set_input_to_diffmodel(self, noisy_data, observed_data, cond_mask, itp_info):
-        if self.is_unconditional == True:
+        if self.is_unconditional:
             total_input = noisy_data.unsqueeze(1)  # (B,1,K,L)
         else:
             cond_obs = (cond_mask * observed_data).unsqueeze(1)
