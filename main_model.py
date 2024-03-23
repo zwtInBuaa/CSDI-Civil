@@ -166,7 +166,7 @@ class CSDI_base(nn.Module):
                 # itp_data = torch.where(cond_mask == 0, float('nan'), tmp_data).to(torch.float64)
                 itp_data = torchcde.linear_interpolation_coeffs(itp_data.permute(2, 1), rectilinear=0).permute(2, 1)
                 itp_data = torchcde.LinearInterpolation(itp_data).unsqueeze(1)
-                total_input = torch.cat([itp_data, noisy_target], dim=1)  # (B,2,K,L)
+                total_input = torch.cat([itp_data, noisy_target], dim=1)  # (B,2,K,L) 
         return total_input
 
     def impute(self, observed_data, cond_mask, side_info, n_samples):
