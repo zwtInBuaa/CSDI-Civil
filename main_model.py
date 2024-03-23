@@ -4,6 +4,7 @@ import torch.nn as nn
 from diff_models_init import diff_CSDI_init
 from diff_models_best import diff_CSDI_best
 from diff_models_saits import diff_CSDI_saits
+import torchcde
 
 
 class CSDI_base(nn.Module):
@@ -16,8 +17,10 @@ class CSDI_base(nn.Module):
         self.emb_feature_dim = config["model"]["featureemb"]
         self.is_unconditional = config["model"]["is_unconditional"]
         self.target_strategy = config["model"]["target_strategy"]
+
         self.diff_model = config["model"]["diff_model"]
         self.loss_ort = config["model"]["loss_ort"]
+        self.use_guide = config["model"]["use_guide"]
 
         self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim
         if self.is_unconditional == False:
@@ -146,7 +149,7 @@ class CSDI_base(nn.Module):
 
         # loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1)
         loss = (residual ** 2).sum() / (num_eval if num_eval > 0 else 1) + self.loss_ort * (
-                    reconstruction_residual ** 2).sum() / (
+                reconstruction_residual ** 2).sum() / (
                    num_reconstruction_eval if num_reconstruction_eval > 0 else 1)
         return loss
 
@@ -156,8 +159,15 @@ class CSDI_base(nn.Module):
         else:
             cond_obs = (cond_mask * observed_data).unsqueeze(1)
             noisy_target = ((1 - cond_mask) * noisy_data).unsqueeze(1)
-            total_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
-
+            if not self.use_guide:
+                total_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
+            else:
+                # tmp_data = torch.tensor(observed_data).to(torch.float64)
+                itp_data = torch.where(cond_mask == 0, float('nan'), cond_obs).to(torch.float)
+                itp_data = torchcde.linear_interpolation_coeffs(
+                    itp_data.permute(1, 0).unsqueeze(-1)).squeeze(-1).permute(1, 0)
+                itp_data = itp_data.unsqueeze(1)
+                total_input = torch.cat([itp_data, noisy_target], dim=1)  # (B,2,K,L)
         return total_input
 
     def impute(self, observed_data, cond_mask, side_info, n_samples):
@@ -182,9 +192,10 @@ class CSDI_base(nn.Module):
                     diff_input = cond_mask * noisy_cond_history[t] + (1.0 - cond_mask) * current_sample
                     diff_input = diff_input.unsqueeze(1)  # (B,1,K,L)
                 else:
-                    cond_obs = (cond_mask * observed_data).unsqueeze(1)
-                    noisy_target = ((1 - cond_mask) * current_sample).unsqueeze(1)
-                    diff_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
+                    diff_input = self.set_input_to_diffmodel(current_sample, observed_data, cond_mask)
+                    # cond_obs = (cond_mask * observed_data).unsqueeze(1)
+                    # noisy_target = ((1 - cond_mask) * current_sample).unsqueeze(1)
+                    # diff_input = torch.cat([cond_obs, noisy_target], dim=1)  # (B,2,K,L)
                 predicted = self.diffmodel(diff_input, side_info, torch.tensor([t]).to(self.device))
 
                 coeff1 = 1 / self.alpha_hat[t] ** 0.5

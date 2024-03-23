@@ -21,3 +21,4 @@ model:
   timeemb: 128
   featureemb: 16
   target_strategy: "random"
+  use_guide: true
