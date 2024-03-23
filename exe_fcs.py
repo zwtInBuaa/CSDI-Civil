@@ -65,7 +65,7 @@ train_loader, valid_loader, test_loader, scaler, mean_scaler = get_dataloader(
     device=args.device,
     use_guide=config["model"]["use_guide"],
     target_strategy=config["model"]["target_strategy"],
-    validindex=args.validationindex
+    validindex=args.val_len
 )
 model = CSDI_Civil(config, args.device).to(args.device)
 
