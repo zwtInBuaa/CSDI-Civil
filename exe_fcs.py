@@ -58,6 +58,7 @@ config["model"]["is_unconditional"] = args.unconditional
 config["model"]["target_strategy"] = args.targetstrategy
 config["model"]["diff_model"] = args.diffmodel
 config["model"]["loss_ort"] = args.lossort
+config["model"]["missing_ratio"] = args.missratio
 
 config["diffusion"]["layers"] = args.layers
 
@@ -69,7 +70,6 @@ print(json.dumps(config, indent=4))
 file_path = 'result.txt'
 file = open(file_path, "a")
 file.write(str(json.dumps(config, indent=4)))
-
 
 current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 foldername = ("./save/pm25_validationindex" + str(args.validationindex) + "_" + current_time + "/")
