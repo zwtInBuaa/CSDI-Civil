@@ -29,7 +29,6 @@ class CSDI_base(nn.Module):
             num_embeddings=self.target_dim, embedding_dim=self.emb_feature_dim
         )
 
-
         config_diff = config["diffusion"]
         config_diff["side_dim"] = self.emb_total_dim
 

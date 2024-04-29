@@ -34,12 +34,18 @@ parser.add_argument("--validationindex", type=int, default=0, help="index of mon
 parser.add_argument("--nsample", type=int, default=100)
 parser.add_argument("--unconditional", action="store_true")
 
+# 扩散模型类型
 parser.add_argument("--diffmodel", type=int, default=1)
+# 缺失比例中MIT占比
 parser.add_argument("--lossort", type=float, default=0.0)
-
+# 残差层数量
 parser.add_argument("--layers", type=int, default=6)
-
+# 数据缺失率
 parser.add_argument("--missratio", type=int, default=70)
+# 扩散步骤
+parser.add_argument("--numsteps", type=int, default=70)
+# 噪声添加方式
+parser.add_argument("--schedule", type=str, default="quad", choices=["quad", "linear"])
 
 args = parser.parse_args()
 print(args)
@@ -52,9 +58,18 @@ config["model"]["is_unconditional"] = args.unconditional
 config["model"]["target_strategy"] = args.targetstrategy
 config["model"]["diff_model"] = args.diffmodel
 config["model"]["loss_ort"] = args.lossort
+
 config["diffusion"]["layers"] = args.layers
 
+config["diffusion"]["num_steps"] = args.numsteps
+config["diffusion"]["schedule"] = args.schedule
+
 print(json.dumps(config, indent=4))
+
+file_path = 'result.txt'
+file = open(file_path, "a")
+file.write(str(json.dumps(config, indent=4)))
+
 
 current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 foldername = ("./save/pm25_validationindex" + str(args.validationindex) + "_" + current_time + "/")
