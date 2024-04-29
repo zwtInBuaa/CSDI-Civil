@@ -6,7 +6,7 @@ import torch
 
 
 class PM25_Dataset(Dataset):
-    def __init__(self, eval_length=32, target_dim=72, mode="train", validindex=0):
+    def __init__(self, eval_length=32, target_dim=72, mode="train", validindex=0, missratio=70):
         self.eval_length = eval_length
         self.target_dim = target_dim
 
@@ -41,11 +41,12 @@ class PM25_Dataset(Dataset):
             index_col="Datetime",
             parse_dates=True,
         )
-        df_gt = pd.read_csv(
-            "./data/ours/miss70.csv",
-            index_col="Datetime",
-            parse_dates=True,
-        )
+        if missratio == 30:
+            df_gt = pd.read_csv("./data/ours/miss30.csv", index_col="Datetime", parse_dates=True)
+        elif missratio == 50:
+            df_gt = pd.read_csv("./data/ours/miss50.csv", index_col="Datetime", parse_dates=True)
+        else:
+            df_gt = pd.read_csv("./data/ours/miss70.csv", index_col="Datetime", parse_dates=True)
         for i in range(len(month_list)):
             current_df = df[df.index.month == month_list[i]]
             current_df_gt = df_gt[df_gt.index.month == month_list[i]]
@@ -138,16 +139,16 @@ class PM25_Dataset(Dataset):
         return len(self.use_index)
 
 
-def get_dataloader(batch_size, device, validindex=0):
-    dataset = PM25_Dataset(mode="train", validindex=validindex)
+def get_dataloader(batch_size, device, validindex=0, missratio=70):
+    dataset = PM25_Dataset(mode="train", validindex=validindex, missratio=missratio)
     train_loader = DataLoader(
         dataset, batch_size=batch_size, num_workers=1, shuffle=True
     )
-    dataset_test = PM25_Dataset(mode="test", validindex=validindex)
+    dataset_test = PM25_Dataset(mode="test", validindex=validindex, missratio=missratio)
     test_loader = DataLoader(
         dataset_test, batch_size=batch_size, num_workers=1, shuffle=False
     )
-    dataset_valid = PM25_Dataset(mode="valid", validindex=validindex)
+    dataset_valid = PM25_Dataset(mode="valid", validindex=validindex, missratio=missratio)
     valid_loader = DataLoader(
         dataset_valid, batch_size=batch_size, num_workers=1, shuffle=False
     )

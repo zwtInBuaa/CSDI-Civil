@@ -34,8 +34,12 @@ parser.add_argument("--validationindex", type=int, default=0, help="index of mon
 parser.add_argument("--nsample", type=int, default=100)
 parser.add_argument("--unconditional", action="store_true")
 
-parser.add_argument("--diffmodel", type=int, default=0)
+parser.add_argument("--diffmodel", type=int, default=1)
 parser.add_argument("--lossort", type=float, default=0.0)
+
+parser.add_argument("--layers", type=int, default=6)
+
+parser.add_argument("--missratio", type=int, default=70)
 
 args = parser.parse_args()
 print(args)
@@ -48,6 +52,7 @@ config["model"]["is_unconditional"] = args.unconditional
 config["model"]["target_strategy"] = args.targetstrategy
 config["model"]["diff_model"] = args.diffmodel
 config["model"]["loss_ort"] = args.lossort
+config["diffusion"]["layers"] = args.layers
 
 print(json.dumps(config, indent=4))
 
@@ -60,7 +65,7 @@ with open(foldername + "config.json", "w") as f:
     json.dump(config, f, indent=4)
 
 train_loader, valid_loader, test_loader, scaler, mean_scaler = get_dataloader(
-    config["train"]["batch_size"], device=args.device, validindex=args.validationindex
+    config["train"]["batch_size"], device=args.device, validindex=args.validationindex, missratio=args.missratio
 )
 model = CSDI_PM25(config, args.device).to(args.device)
 
