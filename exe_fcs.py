@@ -43,7 +43,7 @@ parser.add_argument("--layers", type=int, default=6)
 # 数据缺失率
 parser.add_argument("--missratio", type=int, default=70)
 # 扩散步骤
-parser.add_argument("--numsteps", type=int, default=70)
+parser.add_argument("--numsteps", type=int, default=50)
 # 噪声添加方式
 parser.add_argument("--schedule", type=str, default="quad", choices=["quad", "linear"])
 
