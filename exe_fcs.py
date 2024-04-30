@@ -32,7 +32,7 @@ parser.add_argument("--modelfolder", type=str, default="")
 parser.add_argument("--targetstrategy", type=str, default="mix", choices=["mix", "random", "historical"])
 parser.add_argument("--validationindex", type=int, default=0, help="index of month used for validation (value:[0-7])")
 parser.add_argument("--nsample", type=int, default=100)
-parser.add_argument("--unconditional", type=int, action="store_true")
+parser.add_argument("--unconditional", action="store_true")
 
 # 扩散模型类型
 parser.add_argument("--diffmodel", type=int, default=1)
