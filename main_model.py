@@ -135,8 +135,9 @@ class CSDI_base(nn.Module):
         noisy_data = (current_alpha ** 0.5) * observed_data + (1.0 - current_alpha) ** 0.5 * noise
 
         total_input = self.set_input_to_diffmodel(noisy_data, observed_data, cond_mask)
-        cond_obs = (cond_mask * observed_data).unsqueeze(1)
-        side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
+        if not self.is_unconditional:
+            cond_obs = (cond_mask * observed_data).unsqueeze(1)
+            side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
 
         predicted = self.diffmodel(total_input, side_info, t)  # (B,K,L)
 
