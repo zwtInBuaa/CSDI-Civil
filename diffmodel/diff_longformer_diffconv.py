@@ -126,7 +126,7 @@ class ResidualBlock(nn.Module):
 
         # generate adj matrix
         latitudes = np.linspace(0, 1, 6)
-        longitudes = np.linspace(0, 1, 6)
+        longitudes = np.linspace(0, 1, 12)
         spatial_coords = np.array(np.meshgrid(latitudes, longitudes)).T.reshape(-1, 2)
         # adjacency matrix
         spatial_distances = squareform(pdist(spatial_coords))
