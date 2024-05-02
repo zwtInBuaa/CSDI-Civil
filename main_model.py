@@ -1,9 +1,11 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from diff_models_init import diff_CSDI_init
-from diff_models_best import diff_CSDI_best
-from diff_models_saits import diff_CSDI_saits
+from diffmodel.diff_models_init import diff_CSDI_init
+from diffmodel.diff_dilated_conv import diff_dilated_conv
+from diffmodel.diff_models_best import diff_CSDI_best
+from diffmodel.diff_models_saits import diff_CSDI_saits
+
 import torchcde
 
 
@@ -37,8 +39,10 @@ class CSDI_base(nn.Module):
             self.diffmodel = diff_CSDI_init(config_diff, input_dim)
         elif self.diff_model == 1:
             self.diffmodel = diff_CSDI_best(config_diff, input_dim)
-        else:
+        elif self.diff_model == 2:
             self.diffmodel = diff_CSDI_saits(config_diff, input_dim)
+        elif self.diff_model == 3:
+            self.diffmodel = diff_dilated_conv(config_diff, input_dim)
 
         # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
