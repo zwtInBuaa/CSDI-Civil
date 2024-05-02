@@ -122,7 +122,7 @@ class ResidualBlock(nn.Module):
 
         # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=9)
+        self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=10)
 
         # generate adj matrix
         latitudes = np.linspace(0, 1, 6)
