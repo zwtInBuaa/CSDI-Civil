@@ -92,7 +92,7 @@ with open(foldername + "config.json", "w") as f:
 # adjacency_matrix = spatial_correlation
 
 # save adjacency matrix to data/adjaency_matrix.npy
-np.save('data/ours/adj_matrix.npy', adjacency_matrix)
+# np.save('data/ours/adj_matrix.npy', adjacency_matrix)
 
 train_loader, valid_loader, test_loader, scaler, mean_scaler = get_dataloader(
     config["train"]["batch_size"], device=args.device, validindex=args.validationindex, missratio=args.missratio
