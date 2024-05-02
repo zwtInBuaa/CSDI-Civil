@@ -2,9 +2,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 from diffmodel.diff_models_init import diff_CSDI_init
-from diffmodel.diff_dilated_conv import diff_dilated_conv
 from diffmodel.diff_models_best import diff_CSDI_best
 from diffmodel.diff_models_saits import diff_CSDI_saits
+from diffmodel.diff_dilated_conv import diff_dilated_conv  # Diffwave
+from diffmodel.diff_bilstm import diff_bilstm  # bi LSTM based on RNNs
 
 import torchcde
 
@@ -42,7 +43,9 @@ class CSDI_base(nn.Module):
         elif self.diff_model == 2:
             self.diffmodel = diff_CSDI_saits(config_diff, input_dim)
         elif self.diff_model == 3:
-            self.diffmodel = diff_dilated_conv(config_diff, input_dim) 
+            self.diffmodel = diff_dilated_conv(config_diff, input_dim)
+        elif self.diff_model == 4:
+            self.diff_model = diff_bilstm(config_diff, input_dim)
 
         # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
