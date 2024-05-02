@@ -104,7 +104,7 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.time_layer = get_tcn(input_size=channels, hidden_size=[64, 128, 256])
+        self.time_layer = get_tcn(input_size=channels, hidden_size=[channels, channels * 2])
 
     def forward(self, x, cond_info, diffusion_emb):
         B, channel, K, L = x.shape
