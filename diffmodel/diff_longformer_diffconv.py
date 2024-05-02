@@ -5,6 +5,7 @@ import math
 import numpy as np
 from layers.longformer import LongformerTS
 from layers.spatial_conv import SpatialDiffusionConv
+from scipy.spatial.distance import pdist, squareform
 
 
 def get_longformerTS(heads=8, layers=1, channels=64, hidden_size=64, attention_window=27, attention_dilation=1,
@@ -123,10 +124,16 @@ class ResidualBlock(nn.Module):
         # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=9)
 
-        # read adj matrix from file
-        adj = np.load('adj_matrix.npy')
+        # generate adj matrix
+        latitudes = np.linspace(0, 1, 6)
+        longitudes = np.linspace(0, 1, 6)
+        spatial_coords = np.array(np.meshgrid(latitudes, longitudes)).T.reshape(-1, 2)
+        # adjacency matrix
+        spatial_distances = squareform(pdist(spatial_coords))
+        spatial_correlation = np.exp(-spatial_distances / 0.1)
+        adjacency_matrix = spatial_correlation
         # convert to torch tensor
-        adj = torch.from_numpy(adj).float()
+        adj = torch.from_numpy(adjacency_matrix).float()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         adj = adj.to(device)
         self.feature_layer = get_spatial_diffusion_conv(channels=channels,
