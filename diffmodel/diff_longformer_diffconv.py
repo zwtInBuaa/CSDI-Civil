@@ -124,7 +124,7 @@ class ResidualBlock(nn.Module):
         self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=9)
 
         # read adj matrix from file
-        adj = np.load('../data/ours/adj_matrix.npy')
+        adj = np.load('adj_matrix.npy')
         # convert to torch tensor
         adj = torch.from_numpy(adj).float()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

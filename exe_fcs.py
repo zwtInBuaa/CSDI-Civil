@@ -81,15 +81,15 @@ os.makedirs(foldername, exist_ok=True)
 with open(foldername + "config.json", "w") as f:
     json.dump(config, f, indent=4)
 
-# generate adj matrix
-latitudes = np.linspace(0, 1, 6)
-longitudes = np.linspace(0, 1, 6)
-spatial_coords = np.array(np.meshgrid(latitudes, longitudes)).T.reshape(-1, 2)
-
-# adjacency matrix
-spatial_distances = squareform(pdist(spatial_coords))
-spatial_correlation = np.exp(-spatial_distances / 0.1)
-adjacency_matrix = spatial_correlation
+# # generate adj matrix
+# latitudes = np.linspace(0, 1, 6)
+# longitudes = np.linspace(0, 1, 6)
+# spatial_coords = np.array(np.meshgrid(latitudes, longitudes)).T.reshape(-1, 2)
+#
+# # adjacency matrix
+# spatial_distances = squareform(pdist(spatial_coords))
+# spatial_correlation = np.exp(-spatial_distances / 0.1)
+# adjacency_matrix = spatial_correlation
 
 # save adjacency matrix to data/adjaency_matrix.npy
 np.save('data/ours/adj_matrix.npy', adjacency_matrix)
