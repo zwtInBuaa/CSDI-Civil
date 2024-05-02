@@ -5,7 +5,9 @@ import json
 import yaml
 import os
 import random
-import numpy
+import numpy as np
+
+from scipy.spatial.distance import pdist, squareform
 
 from dataset_fcs import get_dataloader
 from main_model import CSDI_PM25
@@ -15,7 +17,7 @@ from utils import train, evaluate
 def seed_torch(seed=1000):  # 1029,1030
     random.seed(seed)
     # os.environ['PYTHONHASHSEED'] = str(seed)  # 为了禁止hash随机化，使得实验可复现
-    numpy.random.seed(seed)
+    np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
@@ -78,6 +80,19 @@ print('model folder:', foldername)
 os.makedirs(foldername, exist_ok=True)
 with open(foldername + "config.json", "w") as f:
     json.dump(config, f, indent=4)
+
+# generate adj matrix
+latitudes = np.linspace(0, 1, 6)
+longitudes = np.linspace(0, 1, 6)
+spatial_coords = np.array(np.meshgrid(latitudes, longitudes)).T.reshape(-1, 2)
+
+# adjacency matrix
+spatial_distances = squareform(pdist(spatial_coords))
+spatial_correlation = np.exp(-spatial_distances / 0.1)
+adjacency_matrix = spatial_correlation
+
+# save adjacency matrix to data/adjaency_matrix.npy
+np.save('data/ours/adj_matrix.npy', adjacency_matrix)
 
 train_loader, valid_loader, test_loader, scaler, mean_scaler = get_dataloader(
     config["train"]["batch_size"], device=args.device, validindex=args.validationindex, missratio=args.missratio
