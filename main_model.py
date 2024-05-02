@@ -51,7 +51,7 @@ class CSDI_base(nn.Module):
         elif self.diff_model == 5:
             self.diffmodel = diff_tcn(config_diff, input_dim)
         elif self.diff_model == 6:
-            self.diffmodel = diff_longformer_diffconv(config, input_dim)
+            self.diffmodel = diff_longformer_diffconv(config_diff, input_dim)
 
             # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
