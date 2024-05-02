@@ -8,6 +8,13 @@ from layers.spatial_conv import SpatialDiffusionConv
 from scipy.spatial.distance import pdist, squareform
 
 
+def get_torch_trans(heads=8, layers=1, channels=64):
+    encoder_layer = nn.TransformerEncoderLayer(
+        d_model=channels, nhead=heads, dim_feedforward=64, activation="gelu"
+    )
+    return nn.TransformerEncoder(encoder_layer, num_layers=layers)
+
+
 def get_longformerTS(heads=8, layers=1, channels=64, hidden_size=64, attention_window=27, attention_dilation=1,
                      attention_mode="sliding_chunks"):
     encoder_layer = LongformerTS(d_model=channels, nhead=heads, dim_feedforward=hidden_size, activation="gelu",
@@ -61,7 +68,7 @@ class DiffusionEmbedding(nn.Module):
         return table
 
 
-class diff_longformer_diffconv(nn.Module):
+class diff_diffconv(nn.Module):
     def __init__(self, config, inputdim=2):
         super().__init__()
         self.channels = config["channels"]
@@ -120,7 +127,7 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=10)
 
@@ -167,7 +174,7 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        # y = self.forward_time(y, base_shape)
+        y = self.forward_time(y, base_shape)
         y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 

@@ -7,7 +7,7 @@ from diffmodel.diff_models_saits import diff_CSDI_saits
 from diffmodel.diff_dilated_conv import diff_dilated_conv  # Diffwave
 from diffmodel.diff_bilstm import diff_bilstm  # bi LSTM based on RNNs
 from diffmodel.diff_tcn import diff_tcn  # TCN
-from diffmodel.diff_longformer_diffconv import diff_longformer_diffconv  # diffconv
+from diffmodel.diff_diffconv import diff_diffconv  # diffconv
 
 import torchcde
 
@@ -51,7 +51,7 @@ class CSDI_base(nn.Module):
         elif self.diff_model == 5:
             self.diffmodel = diff_tcn(config_diff, input_dim)
         elif self.diff_model == 6:
-            self.diffmodel = diff_longformer_diffconv(config_diff, input_dim)
+            self.diffmodel = diff_diffconv(config_diff, input_dim)
 
             # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
