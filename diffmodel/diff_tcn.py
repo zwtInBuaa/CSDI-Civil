@@ -114,7 +114,9 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
+        y = y.reshape(B, channel, K, L)
         y = self.time_layer(y)
+        y = y.reshape(B, channel, K * L)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 
         _, cond_dim, _, _ = cond_info.shape
