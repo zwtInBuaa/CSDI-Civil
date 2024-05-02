@@ -122,7 +122,7 @@ class ResidualBlock(nn.Module):
 
         # self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         # self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=10)
+        # self.time_layer = get_longformerTS(heads=8, layers=1, channels=channels, hidden_size=64, attention_window=10)
 
         # generate adj matrix
         latitudes = np.linspace(0, 1, 6)
@@ -167,7 +167,7 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
+        # y = self.forward_time(y, base_shape)
         y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 
