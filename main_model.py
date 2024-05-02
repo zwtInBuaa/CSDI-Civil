@@ -42,7 +42,7 @@ class CSDI_base(nn.Module):
         elif self.diff_model == 2:
             self.diffmodel = diff_CSDI_saits(config_diff, input_dim)
         elif self.diff_model == 3:
-            self.diffmodel = diff_dilated_conv(config_diff, input_dim)
+            self.diffmodel = diff_dilated_conv(config_diff, input_dim) 
 
         # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
