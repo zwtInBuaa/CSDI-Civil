@@ -6,7 +6,7 @@ train:
   lr: 1.0e-3
 
 diffusion:
-  layers: 6
+  layers: 10
   channels: 64
   nheads: 16
   diffusion_embedding_dim: 128
