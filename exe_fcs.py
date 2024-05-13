@@ -41,7 +41,7 @@ parser.add_argument("--diffmodel", type=int, default=1)
 # 缺失比例中MIT占比
 parser.add_argument("--lossort", type=float, default=0.0)
 # 残差层数量
-parser.add_argument("--layers", type=int, default=6)
+parser.add_argument("--layers", type=int, default=10)
 # 数据缺失率
 parser.add_argument("--missratio", type=int, default=70)
 # 扩散步骤
