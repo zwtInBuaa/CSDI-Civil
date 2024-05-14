@@ -67,4 +67,4 @@ for k in range(K):
     if row == -1:
         plt.setp(axes[-1, col], xlabel='time')
 
-plt.savefig("./save/result/1.png")
+plt.savefig("res.png")
