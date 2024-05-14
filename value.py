@@ -22,6 +22,11 @@ all_evalpoint_np = all_evalpoint.cpu().numpy()
 all_observed_np = all_observed.cpu().numpy()
 all_given_np = all_observed_np - all_evalpoint_np
 
+print("samples.shape:", samples.shape)
+print("all_target.shape:", all_target.shape)
+print("all_evalpoint.shape:", all_evalpoint.shape)
+print("all_observed.shape", all_observed.shape)
+
 K = samples.shape[-1]  # feature
 L = samples.shape[-2]  # time length
 
