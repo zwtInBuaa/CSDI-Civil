@@ -13,7 +13,7 @@ dataset = 'airquality'  # choose 'healthcare' or 'airquality'
 
 nsample = 100  # number of generated sample
 
-path = './save/pm25_validationindex0_best400/generated_outputs_nsample100.pk'
+path = './save/pm25_validationindex0_20240501_081738/generated_outputs_nsample100.pk'
 with open(path, 'rb') as f:
     samples, all_target, all_evalpoint, all_observed, all_observed_time, scaler, mean_scaler = pickle.load(f)
 
