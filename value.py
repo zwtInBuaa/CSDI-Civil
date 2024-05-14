@@ -44,10 +44,10 @@ quantiles_imp = []
 for q in qlist:
     quantiles_imp.append(get_quantile(samples, q, dim=1) * (1 - all_given_np) + all_target_np * all_given_np)
 
-dataind = 1  # change to visualize a different sample
+dataind = 2  # change to visualize a different sample
 
 # plt.rcParams["font.size"] = 16
-fig, axes = plt.subplots(nrows=9, ncols=8, figsize=(36, 36.0))
+fig, axes = plt.subplots(nrows=18, ncols=4, figsize=(24, 156))
 fig.delaxes(axes[-1][-1])
 
 for k in range(K):
