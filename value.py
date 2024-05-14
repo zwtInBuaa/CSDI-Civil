@@ -13,7 +13,7 @@ dataset = 'Civil'  # dataset to choose
 
 nsample = 100  # number of generated sample
 
-path = './save/pm25_validationindex0_20240501_081738/generated_outputs_nsample100.pk'
+path = './save/pm25_validationindex0_20240513_202142/generated_outputs_nsample100.pk'
 with open(path, 'rb') as f:
     samples, all_target, all_evalpoint, all_observed, all_observed_time, scaler, mean_scaler = pickle.load(f)
 
@@ -44,7 +44,7 @@ quantiles_imp = []
 for q in qlist:
     quantiles_imp.append(get_quantile(samples, q, dim=1) * (1 - all_given_np) + all_target_np * all_given_np)
 
-dataind = 10  # change to visualize a different sample
+dataind = 1  # change to visualize a different sample
 
 # plt.rcParams["font.size"] = 16
 fig, axes = plt.subplots(nrows=9, ncols=8, figsize=(36, 36.0))
