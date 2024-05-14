@@ -13,6 +13,8 @@ dataset = 'Civil'  # dataset to choose
 
 nsample = 100  # number of generated sample
 
+
+
 path = './save/pm25_validationindex0_20240513_202142/generated_outputs_nsample100.pk'
 with open(path, 'rb') as f:
     samples, all_target, all_evalpoint, all_observed, all_observed_time, scaler, mean_scaler = pickle.load(f)
@@ -55,8 +57,8 @@ for k in range(K):
     df = df[df.y != 0]
     df2 = pd.DataFrame({"x": np.arange(0, L), "val": all_target_np[dataind, :, k], "y": all_given_np[dataind, :, k]})
     df2 = df2[df2.y != 0]
-    row = k // 8
-    col = k % 8
+    row = k // 4
+    col = k % 4
     axes[row][col].plot(range(0, L), quantiles_imp[2][dataind, :, k], color='g', linestyle='solid', label='CSDI')
     axes[row][col].fill_between(range(0, L), quantiles_imp[0][dataind, :, k], quantiles_imp[4][dataind, :, k],
                                 color='g', alpha=0.3)
