@@ -9,7 +9,7 @@ def get_quantile(samples, q, dim=1):
     return torch.quantile(samples, q, dim=dim).cpu().numpy()
 
 
-dataset = 'airquality'  # choose 'healthcare' or 'airquality'
+dataset = 'Civil'  # dataset to choose
 
 nsample = 100  # number of generated sample
 
@@ -30,7 +30,7 @@ print("all_observed.shape", all_observed.shape)
 K = samples.shape[-1]  # feature
 L = samples.shape[-2]  # time length
 
-if dataset == 'airquality':
+if dataset == 'Civil':
     path = './data/ours/our_meanstd.pk'
     with open(path, 'rb') as f:
         train_mean, train_std = pickle.load(f)
@@ -47,7 +47,7 @@ for q in qlist:
 dataind = 10  # change to visualize a different sample
 
 # plt.rcParams["font.size"] = 16
-fig, axes = plt.subplots(nrows=15, ncols=5, figsize=(36, 36.0))
+fig, axes = plt.subplots(nrows=9, ncols=8, figsize=(36, 36.0))
 fig.delaxes(axes[-1][-1])
 
 for k in range(K):
@@ -55,8 +55,8 @@ for k in range(K):
     df = df[df.y != 0]
     df2 = pd.DataFrame({"x": np.arange(0, L), "val": all_target_np[dataind, :, k], "y": all_given_np[dataind, :, k]})
     df2 = df2[df2.y != 0]
-    row = k // 5
-    col = k % 5
+    row = k // 8
+    col = k % 8
     axes[row][col].plot(range(0, L), quantiles_imp[2][dataind, :, k], color='g', linestyle='solid', label='CSDI')
     axes[row][col].fill_between(range(0, L), quantiles_imp[0][dataind, :, k], quantiles_imp[4][dataind, :, k],
                                 color='g', alpha=0.3)
