@@ -3,6 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+'''
+layers:64
+'''
+
 
 def Conv1d(*args, **kwargs):
     layer = nn.Conv1d(*args, **kwargs)

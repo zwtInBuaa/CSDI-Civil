@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
+from layers.Attention import *
 
 
 def get_torch_trans(heads=8, layers=1, channels=64):
@@ -46,7 +47,7 @@ class DiffusionEmbedding(nn.Module):
         return table
 
 
-class diff_CSDI_init(nn.Module):
+class diff_saits(nn.Module):
     def __init__(self, config, inputdim=2):
         super().__init__()
         self.channels = config["channels"]
@@ -105,25 +106,29 @@ class ResidualBlock(nn.Module):
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
 
-        self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
-        self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
+        self.time_layer = EncoderLayer(d_time=32, d_feature=72, d_model=channels, d_inner=128, n_head=nheads, d_k=64,
+                                       d_v=64, dropout=0.1, attn_dropout=0)
+        self.feature_layer = EncoderLayer(d_time=72, d_feature=32, d_model=channels, d_inner=128, n_head=nheads, d_k=64,
+                                          d_v=64, dropout=0.1, attn_dropout=0)
 
     def forward_time(self, y, base_shape):
         B, channel, K, L = base_shape
         if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 2, 1, 3).reshape(B * K, channel, L)
-        y = self.time_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
+        y, attens = self.time_layer(y.permute(0, 2, 1))
+        y = y.permute(0, 2, 1)
         y = y.reshape(B, K, channel, L).permute(0, 2, 1, 3).reshape(B, channel, K * L)
         return y
 
     def forward_feature(self, y, base_shape):
         B, channel, K, L = base_shape
-        if K == 1:
+        if L == 1:
             return y
         y = y.reshape(B, channel, K, L).permute(0, 3, 1, 2).reshape(B * L, channel, K)
-        y = self.feature_layer(y.permute(2, 0, 1)).permute(1, 2, 0)
-        y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
+        y, attens = self.feature_layer(y.permute(0, 2, 1))
+        y = y.permute(0, 2, 1)
+        y = y.reshape(B, K, channel, L).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
     def forward(self, x, cond_info, diffusion_emb):
@@ -134,8 +139,9 @@ class ResidualBlock(nn.Module):
         diffusion_emb = self.diffusion_projection(diffusion_emb).unsqueeze(-1)  # (B,channel,1)
         y = x + diffusion_emb
 
-        y = self.forward_time(y, base_shape)
-        y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y_time = self.forward_time(y, base_shape)
+        y_feature = self.forward_feature(y, base_shape)  # (B,channel,K*L)
+        y = torch.sigmoid(y_time) * torch.tanh(y_feature)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
 
         _, cond_dim, _, _ = cond_info.shape

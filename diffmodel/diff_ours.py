@@ -49,7 +49,7 @@ class DiffusionEmbedding(nn.Module):
         return table
 
 
-class diff_CSDI_best(nn.Module):
+class diff_ours(nn.Module):
     def __init__(self, config, inputdim=2):
         super().__init__()
         self.channels = config["channels"]
