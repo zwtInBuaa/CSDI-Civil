@@ -16,7 +16,6 @@ author = {Wenjie Du and David Cote and Yan Liu},
 }
 
 or
-
 Wenjie Du, David Cote, and Yan Liu. SAITS: Self-Attention-based Imputation for Time Series. Expert Systems with Applications, 219:119619, 2023. https://doi.org/10.1016/j.eswa.2023.119619
 """
 
