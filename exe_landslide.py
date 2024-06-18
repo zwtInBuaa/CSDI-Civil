@@ -9,7 +9,7 @@ import numpy as np
 
 from scipy.spatial.distance import pdist, squareform
 
-from dataset_fcs import get_dataloader
+from dataset_landslide import get_dataloader
 from main_model import CSDI_LandSlide
 from utils import train, evaluate
 
