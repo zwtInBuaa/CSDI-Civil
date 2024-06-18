@@ -10,7 +10,7 @@ class LandSlide_Dataset(Dataset):
         self.eval_length = eval_length
         self.target_dim = target_dim
 
-        path = "./data/ours/our_meanstd.pk"
+        path = "./data/landslide/02_mean_std.pk"
         with open(path, "rb") as f:
             self.train_mean, self.train_std = pickle.load(f)
         if mode == "train":
