@@ -300,9 +300,10 @@ class CSDI_PM25(CSDI_base):
             cut_length,
         )
 
+
 class CSDI_LandSlide(CSDI_base):
     def __init__(self, config, device, target_dim=7):
-        super(CSDI_PM25, self).__init__(target_dim, config, device)
+        super(CSDI_LandSlide, self).__init__(target_dim, config, device)
 
     def process_data(self, batch):
         observed_data = batch["observed_data"].to(self.device).float()
