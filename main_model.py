@@ -17,6 +17,7 @@ class CSDI_base(nn.Module):
         super().__init__()
         self.device = device
         self.target_dim = target_dim
+        print(target_dim)
 
         self.emb_time_dim = config["model"]["timeemb"]
         self.emb_feature_dim = config["model"]["featureemb"]
