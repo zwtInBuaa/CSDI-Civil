@@ -9,8 +9,8 @@ import numpy as np
 
 from scipy.spatial.distance import pdist, squareform
 
-from dataset_fcs import get_dataloader
-from main_model import CSDI_PM25
+from dataset_WUHAN import get_dataloader
+from main_model import CSDI_WUHAN
 from utils import train, evaluate
 
 
@@ -44,7 +44,7 @@ parser.add_argument("--lossort", type=float, default=0.0)
 # 残差层数量
 parser.add_argument("--layers", type=int, default=10)
 # 数据缺失率
-parser.add_argument("--missratio", type=int, default=70)
+parser.add_argument("--missratio", type=int, default=70, choices=[30, 50, 70])
 # 扩散步骤
 parser.add_argument("--numsteps", type=int, default=50)
 # 噪声添加方式
@@ -82,26 +82,10 @@ os.makedirs(foldername, exist_ok=True)
 with open(foldername + "config.json", "w") as f:
     json.dump(config, f, indent=4)
 
-
-'''创建adj矩阵
-# generate adj matrix
-latitudes = np.linspace(0, 1, 6)
-longitudes = np.linspace(0, 1, 6)
-spatial_coords = np.array(np.meshgrid(latitudes, longitudes)).T.reshape(-1, 2)
-
-# adjacency matrix
-spatial_distances = squareform(pdist(spatial_coords))
-spatial_correlation = np.exp(-spatial_distances / 0.1)
-adjacency_matrix = spatial_correlation
-
-np.save('data/ours/adj_matrix.npy', adjacency_matrix)
-'''
-
-
 train_loader, valid_loader, test_loader, scaler, mean_scaler = get_dataloader(
     config["train"]["batch_size"], device=args.device, validindex=args.validationindex, missratio=args.missratio
 )
-model = CSDI_PM25(config, args.device).to(args.device)
+model = CSDI_WUHAN(config, args.device).to(args.device)
 
 if args.modelfolder == "":
     train(
