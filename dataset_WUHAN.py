@@ -44,7 +44,7 @@ class WUHAN_Dataset(Dataset):
         self.cut_length = []  # excluded from evaluation targets
 
         df = pd.read_csv(
-            "./data/WUHAN/02.csv",
+            "./data/WUHAN/4.csv",
             index_col="Datetime",
             parse_dates=True,
         )
