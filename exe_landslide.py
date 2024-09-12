@@ -44,7 +44,7 @@ parser.add_argument("--lossort", type=float, default=0.0)
 # 残差层数量
 parser.add_argument("--layers", type=int, default=10)
 # 数据缺失率
-parser.add_argument("--missratio", type=int, default=70)
+parser.add_argument("--missratio", type=int, default=70, choices=[30, 50, 70])
 # 扩散步骤
 parser.add_argument("--numsteps", type=int, default=50)
 # 噪声添加方式

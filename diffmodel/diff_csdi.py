@@ -73,7 +73,7 @@ class diff_csdi(nn.Module):
             ]
         )
 
-    def forward(self, x, cond_info, diffusion_step):
+    def forward(self, x, factor_data, cond_info, diffusion_step):
         B, inputdim, K, L = x.shape
 
         x = x.reshape(B, inputdim, K * L)
@@ -85,7 +85,7 @@ class diff_csdi(nn.Module):
 
         skip = []
         for layer in self.residual_layers:
-            x, skip_connection = layer(x, cond_info, diffusion_emb)
+            x, skip_connection = layer(x, factor_data, cond_info, diffusion_emb)
             skip.append(skip_connection)
 
         x = torch.sum(torch.stack(skip), dim=0) / math.sqrt(len(self.residual_layers))
@@ -100,10 +100,13 @@ class diff_csdi(nn.Module):
 class ResidualBlock(nn.Module):
     def __init__(self, side_dim, channels, diffusion_embedding_dim, nheads):
         super().__init__()
+
         self.diffusion_projection = nn.Linear(diffusion_embedding_dim, channels)
         self.cond_projection = Conv1d_with_init(side_dim, 2 * channels, 1)
         self.mid_projection = Conv1d_with_init(channels, 2 * channels, 1)
         self.output_projection = Conv1d_with_init(channels, 2 * channels, 1)
+
+        self.factor_projection = Conv1d_with_init(3, 4, 1)
 
         self.time_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
         self.feature_layer = get_torch_trans(heads=nheads, layers=1, channels=channels)
@@ -126,7 +129,7 @@ class ResidualBlock(nn.Module):
         y = y.reshape(B, L, channel, K).permute(0, 2, 3, 1).reshape(B, channel, K * L)
         return y
 
-    def forward(self, x, cond_info, diffusion_emb):
+    def forward(self, x, factor_data, cond_info, diffusion_emb):
         B, channel, K, L = x.shape
         base_shape = x.shape
         x = x.reshape(B, channel, K * L)
@@ -137,6 +140,13 @@ class ResidualBlock(nn.Module):
         y = self.forward_time(y, base_shape)
         y = self.forward_feature(y, base_shape)  # (B,channel,K*L)
         y = self.mid_projection(y)  # (B,2*channel,K*L)
+
+        # factor_data (B,3,L)
+        factor_data = self.factor_projection(factor_data)  # (B,K,L)
+
+        factor_data = factor_data.unsqueeze(1).expand(-1, 2 * channel, K, L)  # (B,1,K,L)
+        factor_data = factor_data.reshape(B, 2 * channel, K * L)
+        y = y + factor_data
 
         _, cond_dim, _, _ = cond_info.shape
         cond_info = cond_info.reshape(B, cond_dim, K * L)
