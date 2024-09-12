@@ -38,7 +38,7 @@ parser.add_argument("--nsample", type=int, default=100)
 parser.add_argument("--unconditional", action="store_true")
 
 # 扩散模型类型
-parser.add_argument("--diffmodel", type=int, default=1)
+parser.add_argument("--diffmodel", type=int, default=0)
 # 缺失比例中MIT占比
 parser.add_argument("--lossort", type=float, default=0.0)
 # 残差层数量
