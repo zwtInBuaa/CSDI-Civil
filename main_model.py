@@ -105,7 +105,7 @@ class CSDI_base(nn.Module):
                 cond_mask[i] = cond_mask[i] * for_pattern_mask[i - 1]
         return cond_mask
 
-    def get_side_info(self, observed_tp, cond_mask, factor_data):
+    def get_side_info(self, observed_tp, cond_mask):
         B, K, L = cond_mask.shape
 
         time_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
