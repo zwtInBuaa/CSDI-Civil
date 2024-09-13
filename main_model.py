@@ -265,7 +265,7 @@ class CSDI_base(nn.Module):
             cond_mask = gt_mask
             target_mask = observed_mask - cond_mask
 
-            side_info = self.get_side_info(observed_tp, cond_mask, factor_data)
+            side_info = self.get_side_info(observed_tp, cond_mask)
             if not self.is_unconditional:
                 cond_obs = (cond_mask * observed_data).unsqueeze(1)
                 side_info = torch.cat([side_info, cond_obs], dim=1)  # (B,*,K,L)
