@@ -13,11 +13,11 @@ dataset = 'Civil'  # dataset to choose
 
 nsample = 100  # number of generated sample
 
-path = './save/pm25_validationindex0_20240501_075941/generated_outputs_nsample100.pk'
+path = './save/pm25_validationindex0_20240513_152635/generated_outputs_nsample100.pk'
 with open(path, 'rb') as f:
     samples, all_target, all_evalpoint, all_observed, all_observed_time, scaler, mean_scaler = pickle.load(f)
 
-path_1 = './save/pm25_validationindex0_20240501_080839/generated_outputs_nsample100.pk'
+path_1 = './save/pm25_validationindex0_20240513_202142/generated_outputs_nsample100.pk'
 with open(path_1, 'rb') as f:
     samples_1, all_target_1, all_evalpoint_1, all_observed_1, all_observed_time_1, scaler_1, mean_scaler_1 = pickle.load(
         f)
@@ -67,7 +67,7 @@ for dataind in range(6):
         axes[row][col].fill_between(range(0, L), quantiles_imp[0][dataind, :, k], quantiles_imp[4][dataind, :, k],
                                     color='g', alpha=0.3)
 
-        axes[row][col].plot(range(0, L), quantiles_imp_1[2][dataind, :, k], color='orange', linestyle='solid',
+        axes[row][col].plot(range(0, L), quantiles_imp_1[2][dataind, :, k], color='gray', linestyle='solid',
                             label='CSDI')
         axes[row][col].fill_between(range(0, L), quantiles_imp_1[0][dataind, :, k], quantiles_imp_1[4][dataind, :, k],
                                     color='gray', alpha=0.3)
