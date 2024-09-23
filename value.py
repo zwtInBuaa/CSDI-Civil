@@ -79,5 +79,5 @@ for dataind in range(6):
         if row == -1:
             plt.setp(axes[-1, col], xlabel='time')
 
-    plt.savefig("res/"+"res" + str(dataind) + '.png')
+    plt.savefig("res/res" + str(dataind) + '.png')
     plt.close()
