@@ -52,7 +52,7 @@ dataind = 0  # change to visualize a different sample
 # plt.rcParams["font.size"] = 16
 
 for dataind in range(6):
-    fig, axes = plt.subplots(nrows=18, ncols=4, figsize=(24, 72))
+    fig, axes = plt.subplots(nrows=12, ncols=6, figsize=(24, 72))
     fig.delaxes(axes[-1][-1])
     for k in range(K):
         df = pd.DataFrame(
