@@ -71,7 +71,6 @@ for dataind in range(6):
                             label='CSDI')
         axes[row][col].fill_between(range(0, L), quantiles_imp_1[0][dataind, :, k], quantiles_imp_1[4][dataind, :, k],
                                     color='orange', alpha=0.3)
-
         axes[row][col].plot(df.x, df.val, color='b', marker='o', linestyle='None')
         axes[row][col].plot(df2.x, df2.val, color='r', marker='x', linestyle='None')
         if col == 0:
