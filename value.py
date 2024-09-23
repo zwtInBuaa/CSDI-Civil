@@ -61,8 +61,8 @@ for dataind in range(6):
         df2 = pd.DataFrame(
             {"x": np.arange(0, L), "val": all_target_np[dataind, :, k], "y": all_given_np[dataind, :, k]})
         df2 = df2[df2.y != 0]
-        row = k // 4
-        col = k % 4
+        row = k // 6
+        col = k % 6
         axes[row][col].plot(range(0, L), quantiles_imp[2][dataind, :, k], color='g', linestyle='solid', label='CSDI')
         axes[row][col].fill_between(range(0, L), quantiles_imp[0][dataind, :, k], quantiles_imp[4][dataind, :, k],
                                     color='g', alpha=0.3)
