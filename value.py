@@ -52,7 +52,7 @@ dataind = 0  # change to visualize a different sample
 # plt.rcParams["font.size"] = 16
 
 for dataind in range(6):
-    fig, axes = plt.subplots(nrows=12, ncols=6, figsize=(24, 72))
+    fig, axes = plt.subplots(nrows=12, ncols=6, figsize=(48, 72))
     fig.delaxes(axes[-1][-1])
     for k in range(K):
         df = pd.DataFrame(
@@ -79,5 +79,5 @@ for dataind in range(6):
         if row == -1:
             plt.setp(axes[-1, col], xlabel='time')
 
-    plt.savefig("res" + str(dataind) + '.png')
+    plt.savefig("res/res" + str(dataind) + '.png')
     plt.close()
